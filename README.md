@@ -85,6 +85,7 @@ LangGraph Orchestrator
 | **SLLM**                        | 고객 요구사항 기반 인테리어 컨설팅 텍스트 생성 | 요구 텍스트             | 스타일·가구·색상 기반 설명 |
 | **Image-to-Image (FLUX)**       | 인테리어 시안 이미지 생성             | 빈 방 이미지 + 텍스트 프롬프트 | 완성 이미지          |
 | **Object Removal / Inpainting** | 방 사진에서 가구 제거               | 원본 이미지             | 가구 제거된 빈 공간 이미지 |
+| **Room Classification** | 사용자 이미지를 기반으로 방(실내 공간) 여부를 자동 분류 | 입력 이미지 | 분류 결과 |
 
 > SLLM 결과 텍스트 → Image Model 프롬프트로 연계되어
 > “텍스트 → 이미지”의 완전한 생성 파이프라인을 구성합니다.
@@ -174,35 +175,6 @@ LangGraph Orchestrator
 
 ---
 
-## 🚀 실행 방법
-
-### 1. Clone Repository
-
-```bash
-git clone https://github.com/SKNETWORKS-FAMILY-AICAMP/SKN15-FINAL-4TEAM.git
-cd SKN15-FINAL-4TEAM
-```
-
-### 2. Backend 실행 (FastAPI)
-
-```bash
-cd backend
-uvicorn main:app --reload
-```
-
-### 3. Frontend 실행
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-### 4. Docker 배포
-
-```bash
-docker-compose up -d --build
-```
 
 ---
 
@@ -230,12 +202,6 @@ docker-compose up -d --build
 
 > **© 2025. Goodfellow Team — SK Networks Family AI CAMP 15기**
 > All rights reserved. `pgvector`
-
----
-
-> **© 2025. Goodfellow Team — SK Networks Family AI CAMP 15기**
-> All rights reserved.
-
 
 
 
