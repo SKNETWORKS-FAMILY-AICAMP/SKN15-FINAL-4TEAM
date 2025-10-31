@@ -5,8 +5,8 @@ import "../App.css";
 function AboutPage() {
   // 재사용 가능한 animation variant 정의
   const fadeUp = {
-    hidden: { opacity: 0, y: 40 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
   };
 
   const staggerContainer = {
@@ -14,7 +14,7 @@ function AboutPage() {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.15,
+        staggerChildren: 0.05,
       },
     },
   };
@@ -24,70 +24,75 @@ function AboutPage() {
       style={{
         padding: "0",
         minHeight: "100vh",
-        background: "linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%)",
-        color: "#333",
+        background: "#0a0a0a",
+        color: "#fff",
         marginTop: "0",
       }}
     >
       {/* Hero Section */}
       <motion.section
         style={{
-          padding: "100px 20px 80px",
-          textAlign: "center",
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          position: "relative",
+          height: "70vh",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "flex-start",
+          padding: "0 80px",
+          background: "linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2000&auto=format&fit=crop') center/cover no-repeat",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
           color: "#fff",
           marginTop: "0",
         }}
         initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true }}
+        animate="visible"
         variants={fadeUp}
       >
         <motion.div
           style={{
-            maxWidth: "800px",
-            margin: "0 auto",
+            display: "inline-block",
+            padding: "10px 25px",
+            border: "2px solid rgba(255, 107, 53, 0.8)",
+            borderRadius: "30px",
+            fontSize: "0.9rem",
+            fontWeight: 600,
+            letterSpacing: "1px",
+            marginBottom: "30px",
+            color: "#ff6b35",
+            background: "rgba(0, 0, 0, 0.3)",
           }}
           variants={fadeUp}
         >
-          <motion.h1
-            style={{
-              fontSize: "clamp(2.5rem, 5vw, 4rem)",
-              fontWeight: 800,
-              marginBottom: "20px",
-              textShadow: "2px 2px 4px rgba(0,0,0,0.2)",
-            }}
-            variants={fadeUp}
-          >
-            Assemble과 함께
-          </motion.h1>
-          <motion.p
-            style={{
-              fontSize: "clamp(1.1rem, 2vw, 1.4rem)",
-              opacity: 0.95,
-              lineHeight: "1.7",
-              marginBottom: "30px",
-            }}
-            variants={fadeUp}
-          >
-            AI 인테리어 디자인의 새로운 지평을 경험해보세요
-          </motion.p>
-          <motion.div
-            style={{
-              display: "inline-block",
-              padding: "15px 40px",
-              background: "rgba(255,255,255,0.2)",
-              backdropFilter: "blur(10px)",
-              borderRadius: "50px",
-              border: "2px solid rgba(255,255,255,0.3)",
-            }}
-            whileHover={{ scale: 1.05, background: "rgba(255,255,255,0.3)" }}
-            variants={fadeUp}
-          >
-            <i className="fas fa-sparkles" style={{ marginRight: "10px" }}></i>
-            당신만의 공간을 디자인하세요
-          </motion.div>
+          ABOUT US
         </motion.div>
+
+        <motion.h1
+          style={{
+            fontSize: "clamp(3rem, 6vw, 4.5rem)",
+            fontWeight: 900,
+            margin: "0 0 20px",
+            textShadow: "3px 3px 6px rgba(0,0,0,0.5)",
+            lineHeight: "1.2",
+            maxWidth: "800px",
+          }}
+          variants={fadeUp}
+        >
+          Assemble과 함께
+        </motion.h1>
+
+        <motion.p
+          style={{
+            fontSize: "1.3rem",
+            opacity: 0.95,
+            margin: 0,
+            maxWidth: "600px",
+            lineHeight: "1.6",
+          }}
+          variants={fadeUp}
+        >
+          AI 인테리어 디자인의 새로운 지평을 경험해보세요
+        </motion.p>
       </motion.section>
 
       {/* Section 1: Core Values */}
@@ -96,10 +101,10 @@ function AboutPage() {
         style={{
           padding: "100px 20px",
           textAlign: "center",
+          background: "#1a1a1a",
         }}
         initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.2 }}
+        animate="visible"
         variants={staggerContainer}
       >
         <motion.h2
@@ -108,10 +113,7 @@ function AboutPage() {
             fontSize: "clamp(2rem, 4vw, 3rem)",
             fontWeight: 700,
             marginBottom: "15px",
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
+            color: "#fff",
           }}
           variants={fadeUp}
         >
@@ -122,7 +124,7 @@ function AboutPage() {
           className="sub-heading"
           style={{
             fontSize: "1.2rem",
-            color: "#6c757d",
+            color: "rgba(255, 255, 255, 0.7)",
             marginBottom: "70px",
             maxWidth: "600px",
             margin: "0 auto 70px",
@@ -145,90 +147,83 @@ function AboutPage() {
         >
           {[
             {
-              icon: "fas fa-brain",
+              emoji: "🤖",
               title: "혁신적인 AI 디자인",
               desc: "최첨단 AI 기술로 당신의 취향에 맞는 맞춤형 인테리어 제안",
-              gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              gradient: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
             },
             {
-              icon: "fas fa-magic",
+              emoji: "✨",
               title: "손쉬운 공간 변환",
               desc: "몇 번의 클릭만으로 빈 방을 꿈의 공간으로 완벽하게 연출",
-              gradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+              gradient: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
             },
             {
-              icon: "fas fa-lightbulb",
+              emoji: "💡",
               title: "무한한 아이디어 제공",
               desc: "다양한 스타일과 컨셉으로 당신의 영감을 현실로 구현",
-              gradient: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+              gradient: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
             },
             {
-              icon: "fas fa-clock",
+              emoji: "⚡",
               title: "시간과 비용 절약",
               desc: "효율적인 AI 디자인으로 프로젝트 기간과 비용을 획기적으로 절감",
-              gradient: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
+              gradient: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
             },
             {
-              icon: "fas fa-sync-alt",
+              emoji: "🔄",
               title: "지속적인 업데이트",
               desc: "최신 디자인 트렌드와 기술을 반영하여 항상 새로운 경험 제공",
-              gradient: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
+              gradient: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
             },
             {
-              icon: "fas fa-globe",
+              emoji: "🌍",
               title: "글로벌 디자인 트렌드",
               desc: "전 세계의 다양한 디자인 트렌드를 반영한 인테리어 솔루션",
-              gradient: "linear-gradient(135deg, #30cfd0 0%, #330867 100%)",
+              gradient: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
             },
           ].map((item, index) => (
             <motion.div
               key={index}
               className="value-item"
               style={{
-                backgroundColor: "#fff",
+                background: "rgba(255, 255, 255, 0.05)",
+                backdropFilter: "blur(10px)",
+                WebkitBackdropFilter: "blur(10px)",
                 padding: "40px 30px",
                 borderRadius: "20px",
-                boxShadow: "0 10px 30px rgba(0, 0, 0, 0.08)",
+                boxShadow: "0 10px 30px rgba(0, 0, 0, 0.3)",
                 textAlign: "center",
                 position: "relative",
                 overflow: "hidden",
-                border: "1px solid rgba(0,0,0,0.05)",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
               }}
               variants={fadeUp}
               whileHover={{
                 y: -10,
-                boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+                boxShadow: "0 20px 40px rgba(0, 0, 0, 0.5)",
                 transition: { duration: 0.3 },
               }}
             >
               <motion.div
                 style={{
-                  width: "80px",
-                  height: "80px",
-                  borderRadius: "20px",
-                  background: item.gradient,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   margin: "0 auto 25px",
+                  fontSize: "3.5em",
                 }}
                 whileHover={{ rotate: 360, scale: 1.1 }}
                 transition={{ duration: 0.6 }}
               >
-                <i
-                  className={`${item.icon}`}
-                  style={{
-                    fontSize: "2.2em",
-                    color: "#fff",
-                  }}
-                ></i>
+                {item.emoji}
               </motion.div>
               <h3
                 style={{
                   fontSize: "1.4em",
                   fontWeight: 700,
                   marginBottom: "15px",
-                  color: "#1a1a1a",
+                  color: "#fff",
                 }}
               >
                 {item.title}
@@ -236,7 +231,7 @@ function AboutPage() {
               <p
                 style={{
                   fontSize: "1rem",
-                  color: "#6c757d",
+                  color: "rgba(255, 255, 255, 0.8)",
                   lineHeight: "1.7",
                 }}
               >
@@ -252,14 +247,15 @@ function AboutPage() {
         className="section-common section-vision"
         style={{
           padding: "100px 20px",
-          background: "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)",
+          background: "linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?q=80&w=2000&auto=format&fit=crop') center/cover no-repeat",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
           textAlign: "center",
           position: "relative",
           overflow: "hidden",
         }}
         initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.2 }}
+        animate="visible"
         variants={staggerContainer}
       >
         <motion.div
@@ -341,38 +337,41 @@ function AboutPage() {
                 text: "고객의 만족을 최우선으로, 우리는 끊임없이 기술과 디자인을 연구합니다.",
                 title: "우리의 비전",
                 icon: "fas fa-rocket",
-                gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                emoji: "🚀",
               },
               {
                 text: "AI 기술을 통해 인테리어 디자인의 장벽을 낮추고 모두에게 제공합니다.",
                 title: "핵심 가치",
                 icon: "fas fa-heart",
-                gradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+                emoji: "❤️",
               },
               {
                 text: "열정적인 팀원들이 만들어가는 Assemble의 미래를 함께하세요.",
                 title: "팀 소개",
                 icon: "fas fa-users",
-                gradient: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+                emoji: "👥",
               },
             ].map((card, index) => (
               <motion.div
                 key={index}
                 className="story-card"
                 style={{
-                  background: card.gradient,
+                  background: "rgba(0, 0, 0, 0.3)",
+                  backdropFilter: "blur(10px)",
+                  WebkitBackdropFilter: "blur(10px)",
                   color: "#fff",
                   padding: "40px",
                   borderRadius: "20px",
                   textAlign: "left",
                   position: "relative",
                   overflow: "hidden",
-                  boxShadow: "0 15px 35px rgba(0,0,0,0.2)",
+                  boxShadow: "0 15px 35px rgba(0,0,0,0.3)",
+                  border: "1px solid rgba(255, 255, 255, 0.2)",
                 }}
                 variants={fadeUp}
                 whileHover={{
                   y: -10,
-                  boxShadow: "0 20px 45px rgba(0,0,0,0.3)",
+                  boxShadow: "0 20px 45px rgba(0,0,0,0.5)",
                   transition: { duration: 0.3 },
                 }}
               >
@@ -392,20 +391,16 @@ function AboutPage() {
                 <div style={{ position: "relative", zIndex: 1 }}>
                   <motion.div
                     style={{
-                      width: "60px",
-                      height: "60px",
-                      borderRadius: "15px",
-                      background: "rgba(255,255,255,0.2)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       marginBottom: "25px",
-                      backdropFilter: "blur(10px)",
+                      fontSize: "3.5em",
                     }}
                     whileHover={{ rotate: 360 }}
                     transition={{ duration: 0.6 }}
                   >
-                    <i className={card.icon} style={{ fontSize: "1.8em" }}></i>
+                    {card.emoji}
                   </motion.div>
                   <h3
                     style={{

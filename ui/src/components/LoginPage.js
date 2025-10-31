@@ -89,7 +89,7 @@ function LoginPage() {
       style={{
         padding: "0",
         minHeight: "100vh",
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        background: "#0a0a0a",
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
@@ -158,16 +158,17 @@ function LoginPage() {
       {/* Login Container */}
       <motion.div
         style={{
-          background: "rgba(255, 255, 255, 0.95)",
+          background: "rgba(255, 255, 255, 0.05)",
           backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
           padding: "50px 40px",
           borderRadius: "25px",
-          boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
+          boxShadow: "0 20px 60px rgba(0, 0, 0, 0.5)",
           width: "100%",
           maxWidth: "450px",
           position: "relative",
           zIndex: 1,
-          border: "1px solid rgba(255, 255, 255, 0.2)",
+          border: "1px solid rgba(255, 255, 255, 0.1)",
         }}
         initial="hidden"
         animate="visible"
@@ -186,24 +187,27 @@ function LoginPage() {
               width: "80px",
               height: "80px",
               margin: "0 auto 20px",
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              background: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
               borderRadius: "20px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 10px 30px rgba(102, 126, 234, 0.4)",
+              boxShadow: "0 10px 30px rgba(255, 107, 53, 0.4)",
+              fontSize: "2.8em",
+              fontWeight: 900,
+              color: "#fff",
             }}
             whileHover={{ rotate: 360, scale: 1.05 }}
             transition={{ duration: 0.6 }}
           >
-            <i className="fas fa-home" style={{ fontSize: "2.5em", color: "#fff" }}></i>
+            A
           </motion.div>
           <h1
             style={{
               fontSize: "2.2em",
               fontWeight: 800,
               margin: "0 0 10px",
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              background: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               backgroundClip: "text",
@@ -211,7 +215,7 @@ function LoginPage() {
           >
             Assemble
           </h1>
-          <p style={{ color: "#6c757d", fontSize: "1em", margin: 0 }}>
+          <p style={{ color: "rgba(255, 255, 255, 0.7)", fontSize: "1em", margin: 0 }}>
             AI 인테리어 디자인 플랫폼
           </p>
         </motion.div>
@@ -228,7 +232,7 @@ function LoginPage() {
                 display: "block",
                 marginBottom: "10px",
                 fontWeight: 600,
-                color: "#333",
+                color: "rgba(255, 255, 255, 0.9)",
                 fontSize: "0.95em",
               }}
             >
@@ -242,19 +246,21 @@ function LoginPage() {
               style={{
                 width: "100%",
                 padding: "14px 18px",
-                border: "2px solid #e9ecef",
+                border: "2px solid rgba(255, 255, 255, 0.1)",
                 borderRadius: "12px",
                 fontSize: "1em",
                 boxSizing: "border-box",
                 transition: "all 0.3s ease",
                 fontFamily: "inherit",
+                background: "rgba(255, 255, 255, 0.05)",
+                color: "#fff",
               }}
               onFocus={(e) => {
-                e.target.style.borderColor = "#667eea";
-                e.target.style.boxShadow = "0 0 0 4px rgba(102, 126, 234, 0.1)";
+                e.target.style.borderColor = "#ff6b35";
+                e.target.style.boxShadow = "0 0 0 4px rgba(255, 107, 53, 0.1)";
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = "#e9ecef";
+                e.target.style.borderColor = "rgba(255, 255, 255, 0.1)";
                 e.target.style.boxShadow = "none";
               }}
             />
@@ -270,7 +276,7 @@ function LoginPage() {
                 display: "block",
                 marginBottom: "10px",
                 fontWeight: 600,
-                color: "#333",
+                color: "rgba(255, 255, 255, 0.9)",
                 fontSize: "0.95em",
               }}
             >
@@ -284,19 +290,21 @@ function LoginPage() {
               style={{
                 width: "100%",
                 padding: "14px 18px",
-                border: "2px solid #e9ecef",
+                border: "2px solid rgba(255, 255, 255, 0.1)",
                 borderRadius: "12px",
                 fontSize: "1em",
                 boxSizing: "border-box",
                 transition: "all 0.3s ease",
                 fontFamily: "inherit",
+                background: "rgba(255, 255, 255, 0.05)",
+                color: "#fff",
               }}
               onFocus={(e) => {
-                e.target.style.borderColor = "#667eea";
-                e.target.style.boxShadow = "0 0 0 4px rgba(102, 126, 234, 0.1)";
+                e.target.style.borderColor = "#ff6b35";
+                e.target.style.boxShadow = "0 0 0 4px rgba(255, 107, 53, 0.1)";
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = "#e9ecef";
+                e.target.style.borderColor = "rgba(255, 255, 255, 0.1)";
                 e.target.style.boxShadow = "none";
               }}
             />
@@ -307,19 +315,19 @@ function LoginPage() {
             style={{
               width: "100%",
               padding: "16px",
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              background: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
               color: "#fff",
               border: "none",
               borderRadius: "12px",
               fontSize: "1.1em",
               fontWeight: 700,
               cursor: "pointer",
-              boxShadow: "0 10px 25px rgba(102, 126, 234, 0.3)",
+              boxShadow: "0 10px 25px rgba(255, 107, 53, 0.3)",
               transition: "all 0.3s ease",
             }}
             whileHover={{
               scale: 1.02,
-              boxShadow: "0 15px 35px rgba(102, 126, 234, 0.4)",
+              boxShadow: "0 15px 35px rgba(255, 107, 53, 0.4)",
             }}
             whileTap={{ scale: 0.98 }}
             variants={fadeUp}
@@ -334,7 +342,7 @@ function LoginPage() {
             marginTop: "30px",
             textAlign: "center",
             fontSize: "0.95em",
-            color: "#6c757d",
+            color: "rgba(255, 255, 255, 0.6)",
           }}
           variants={fadeUp}
         >
@@ -345,18 +353,18 @@ function LoginPage() {
               setShowForgotPassword(true);
             }}
             style={{
-              color: "#667eea",
+              color: "#ff6b35",
               textDecoration: "none",
               fontWeight: 600,
               margin: "0 10px",
               transition: "color 0.3s ease",
             }}
-            onMouseEnter={(e) => (e.target.style.color = "#764ba2")}
-            onMouseLeave={(e) => (e.target.style.color = "#667eea")}
+            onMouseEnter={(e) => (e.target.style.color = "#ff8c5a")}
+            onMouseLeave={(e) => (e.target.style.color = "#ff6b35")}
           >
             비밀번호 찾기
           </a>
-          <span style={{ color: "#dee2e6" }}>|</span>
+          <span style={{ color: "rgba(255, 255, 255, 0.3)" }}>|</span>
           <a
             href="#"
             onClick={(e) => {
@@ -364,14 +372,14 @@ function LoginPage() {
               setShowRegister(true);
             }}
             style={{
-              color: "#667eea",
+              color: "#ff6b35",
               textDecoration: "none",
               fontWeight: 600,
               margin: "0 10px",
               transition: "color 0.3s ease",
             }}
-            onMouseEnter={(e) => (e.target.style.color = "#764ba2")}
-            onMouseLeave={(e) => (e.target.style.color = "#667eea")}
+            onMouseEnter={(e) => (e.target.style.color = "#ff8c5a")}
+            onMouseLeave={(e) => (e.target.style.color = "#ff6b35")}
           >
             회원가입
           </a>
@@ -402,13 +410,16 @@ function LoginPage() {
           >
             <motion.div
               style={{
-                background: "#fff",
+                background: "rgba(255, 255, 255, 0.05)",
+                backdropFilter: "blur(20px)",
+                WebkitBackdropFilter: "blur(20px)",
                 padding: "40px",
                 borderRadius: "25px",
                 width: "90%",
                 maxWidth: "500px",
-                boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
+                boxShadow: "0 20px 60px rgba(0, 0, 0, 0.5)",
                 position: "relative",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
               }}
               variants={modalVariants}
               initial="hidden"
@@ -425,12 +436,12 @@ function LoginPage() {
                   background: "none",
                   border: "none",
                   fontSize: "1.8em",
-                  color: "#aaa",
+                  color: "rgba(255, 255, 255, 0.5)",
                   cursor: "pointer",
                   transition: "color 0.3s ease",
                 }}
-                onMouseEnter={(e) => (e.target.style.color = "#333")}
-                onMouseLeave={(e) => (e.target.style.color = "#aaa")}
+                onMouseEnter={(e) => (e.target.style.color = "#fff")}
+                onMouseLeave={(e) => (e.target.style.color = "rgba(255, 255, 255, 0.5)")}
               >
                 &times;
               </button>
@@ -439,7 +450,7 @@ function LoginPage() {
                 style={{
                   fontSize: "1.8em",
                   fontWeight: 700,
-                  color: "#333",
+                  color: "#fff",
                   marginTop: 0,
                   marginBottom: "30px",
                   textAlign: "center",
@@ -456,7 +467,7 @@ function LoginPage() {
                       display: "block",
                       marginBottom: "10px",
                       fontWeight: 600,
-                      color: "#555",
+                      color: "rgba(255, 255, 255, 0.9)",
                     }}
                   >
                     가입 시 사용한 이메일
@@ -469,18 +480,20 @@ function LoginPage() {
                     style={{
                       width: "100%",
                       padding: "14px 18px",
-                      border: "2px solid #e9ecef",
+                      border: "2px solid rgba(255, 255, 255, 0.1)",
                       borderRadius: "12px",
                       fontSize: "1em",
                       boxSizing: "border-box",
                       transition: "all 0.3s ease",
+                      background: "rgba(255, 255, 255, 0.05)",
+                      color: "#fff",
                     }}
                     onFocus={(e) => {
-                      e.target.style.borderColor = "#667eea";
-                      e.target.style.boxShadow = "0 0 0 4px rgba(102, 126, 234, 0.1)";
+                      e.target.style.borderColor = "#ff6b35";
+                      e.target.style.boxShadow = "0 0 0 4px rgba(255, 107, 53, 0.1)";
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = "#e9ecef";
+                      e.target.style.borderColor = "rgba(255, 255, 255, 0.1)";
                       e.target.style.boxShadow = "none";
                     }}
                   />
@@ -491,7 +504,7 @@ function LoginPage() {
                   style={{
                     width: "100%",
                     padding: "14px",
-                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    background: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
                     color: "#fff",
                     border: "none",
                     borderRadius: "12px",
@@ -535,15 +548,18 @@ function LoginPage() {
           >
             <motion.div
               style={{
-                background: "#fff",
+                background: "rgba(255, 255, 255, 0.05)",
+                backdropFilter: "blur(20px)",
+                WebkitBackdropFilter: "blur(20px)",
                 padding: "40px",
                 borderRadius: "25px",
                 width: "90%",
                 maxWidth: "500px",
-                boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
+                boxShadow: "0 20px 60px rgba(0, 0, 0, 0.5)",
                 position: "relative",
                 maxHeight: "90vh",
                 overflowY: "auto",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
               }}
               variants={modalVariants}
               initial="hidden"
@@ -560,12 +576,12 @@ function LoginPage() {
                   background: "none",
                   border: "none",
                   fontSize: "1.8em",
-                  color: "#aaa",
+                  color: "rgba(255, 255, 255, 0.5)",
                   cursor: "pointer",
                   transition: "color 0.3s ease",
                 }}
-                onMouseEnter={(e) => (e.target.style.color = "#333")}
-                onMouseLeave={(e) => (e.target.style.color = "#aaa")}
+                onMouseEnter={(e) => (e.target.style.color = "#fff")}
+                onMouseLeave={(e) => (e.target.style.color = "rgba(255, 255, 255, 0.5)")}
               >
                 &times;
               </button>
@@ -574,7 +590,7 @@ function LoginPage() {
                 style={{
                   fontSize: "1.8em",
                   fontWeight: 700,
-                  color: "#333",
+                  color: "#fff",
                   marginTop: 0,
                   marginBottom: "30px",
                   textAlign: "center",
@@ -591,7 +607,7 @@ function LoginPage() {
                       display: "block",
                       marginBottom: "10px",
                       fontWeight: 600,
-                      color: "#555",
+                      color: "rgba(255, 255, 255, 0.9)",
                     }}
                   >
                     아이디
@@ -605,18 +621,20 @@ function LoginPage() {
                     style={{
                       width: "100%",
                       padding: "14px 18px",
-                      border: "2px solid #e9ecef",
+                      border: "2px solid rgba(255, 255, 255, 0.1)",
                       borderRadius: "12px",
                       fontSize: "1em",
                       boxSizing: "border-box",
                       transition: "all 0.3s ease",
+                      background: "rgba(255, 255, 255, 0.05)",
+                      color: "#fff",
                     }}
                     onFocus={(e) => {
-                      e.target.style.borderColor = "#667eea";
-                      e.target.style.boxShadow = "0 0 0 4px rgba(102, 126, 234, 0.1)";
+                      e.target.style.borderColor = "#ff6b35";
+                      e.target.style.boxShadow = "0 0 0 4px rgba(255, 107, 53, 0.1)";
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = "#e9ecef";
+                      e.target.style.borderColor = "rgba(255, 255, 255, 0.1)";
                       e.target.style.boxShadow = "none";
                     }}
                   />
@@ -629,7 +647,7 @@ function LoginPage() {
                       display: "block",
                       marginBottom: "10px",
                       fontWeight: 600,
-                      color: "#555",
+                      color: "rgba(255, 255, 255, 0.9)",
                     }}
                   >
                     이메일 주소
@@ -643,18 +661,20 @@ function LoginPage() {
                     style={{
                       width: "100%",
                       padding: "14px 18px",
-                      border: "2px solid #e9ecef",
+                      border: "2px solid rgba(255, 255, 255, 0.1)",
                       borderRadius: "12px",
                       fontSize: "1em",
                       boxSizing: "border-box",
                       transition: "all 0.3s ease",
+                      background: "rgba(255, 255, 255, 0.05)",
+                      color: "#fff",
                     }}
                     onFocus={(e) => {
-                      e.target.style.borderColor = "#667eea";
-                      e.target.style.boxShadow = "0 0 0 4px rgba(102, 126, 234, 0.1)";
+                      e.target.style.borderColor = "#ff6b35";
+                      e.target.style.boxShadow = "0 0 0 4px rgba(255, 107, 53, 0.1)";
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = "#e9ecef";
+                      e.target.style.borderColor = "rgba(255, 255, 255, 0.1)";
                       e.target.style.boxShadow = "none";
                     }}
                   />
@@ -667,7 +687,7 @@ function LoginPage() {
                       display: "block",
                       marginBottom: "10px",
                       fontWeight: 600,
-                      color: "#555",
+                      color: "rgba(255, 255, 255, 0.9)",
                     }}
                   >
                     비밀번호
@@ -682,18 +702,20 @@ function LoginPage() {
                     style={{
                       width: "100%",
                       padding: "14px 18px",
-                      border: "2px solid #e9ecef",
+                      border: "2px solid rgba(255, 255, 255, 0.1)",
                       borderRadius: "12px",
                       fontSize: "1em",
                       boxSizing: "border-box",
                       transition: "all 0.3s ease",
+                      background: "rgba(255, 255, 255, 0.05)",
+                      color: "#fff",
                     }}
                     onFocus={(e) => {
-                      e.target.style.borderColor = "#667eea";
-                      e.target.style.boxShadow = "0 0 0 4px rgba(102, 126, 234, 0.1)";
+                      e.target.style.borderColor = "#ff6b35";
+                      e.target.style.boxShadow = "0 0 0 4px rgba(255, 107, 53, 0.1)";
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = "#e9ecef";
+                      e.target.style.borderColor = "rgba(255, 255, 255, 0.1)";
                       e.target.style.boxShadow = "none";
                     }}
                   />
@@ -706,7 +728,7 @@ function LoginPage() {
                       display: "block",
                       marginBottom: "10px",
                       fontWeight: 600,
-                      color: "#555",
+                      color: "rgba(255, 255, 255, 0.9)",
                     }}
                   >
                     비밀번호 확인
@@ -720,18 +742,20 @@ function LoginPage() {
                     style={{
                       width: "100%",
                       padding: "14px 18px",
-                      border: "2px solid #e9ecef",
+                      border: "2px solid rgba(255, 255, 255, 0.1)",
                       borderRadius: "12px",
                       fontSize: "1em",
                       boxSizing: "border-box",
                       transition: "all 0.3s ease",
+                      background: "rgba(255, 255, 255, 0.05)",
+                      color: "#fff",
                     }}
                     onFocus={(e) => {
-                      e.target.style.borderColor = "#667eea";
-                      e.target.style.boxShadow = "0 0 0 4px rgba(102, 126, 234, 0.1)";
+                      e.target.style.borderColor = "#ff6b35";
+                      e.target.style.boxShadow = "0 0 0 4px rgba(255, 107, 53, 0.1)";
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = "#e9ecef";
+                      e.target.style.borderColor = "rgba(255, 255, 255, 0.1)";
                       e.target.style.boxShadow = "none";
                     }}
                   />
@@ -742,7 +766,7 @@ function LoginPage() {
                   style={{
                     width: "100%",
                     padding: "14px",
-                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    background: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
                     color: "#fff",
                     border: "none",
                     borderRadius: "12px",

@@ -18,8 +18,8 @@ function LibraryPage() {
 
   // Animation variants
   const fadeUp = {
-    hidden: { opacity: 0, y: 40 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
   };
 
   const staggerContainer = {
@@ -27,7 +27,7 @@ function LibraryPage() {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.1,
+        staggerChildren: 0.05,
       },
     },
   };
@@ -192,7 +192,7 @@ function LibraryPage() {
     <main
       style={{
         minHeight: "100vh",
-        background: "linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%)",
+        background: "#0a0a0a",
         paddingTop: "0",
         marginTop: "0",
       }}
@@ -200,9 +200,14 @@ function LibraryPage() {
       {/* Header Section */}
       <motion.div
         style={{
-          textAlign: "center",
-          padding: "60px 20px 40px",
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          position: "relative",
+          height: "500px",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "flex-start",
+          padding: "0 80px",
+          background: "linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1524758631624-e2822e304c36?q=80&w=2000&auto=format&fit=crop') center/cover no-repeat",
           color: "#fff",
           marginBottom: "0",
           marginTop: "0",
@@ -211,22 +216,45 @@ function LibraryPage() {
         animate="visible"
         variants={fadeUp}
       >
+        <motion.div
+          style={{
+            display: "inline-block",
+            padding: "10px 25px",
+            border: "2px solid rgba(255, 107, 53, 0.8)",
+            borderRadius: "30px",
+            fontSize: "0.9rem",
+            fontWeight: 600,
+            letterSpacing: "1px",
+            marginBottom: "30px",
+            color: "#ff6b35",
+            background: "rgba(0, 0, 0, 0.3)",
+          }}
+          variants={fadeUp}
+        >
+          DESIGN RESOURCES
+        </motion.div>
+
         <motion.h1
           style={{
-            fontSize: "clamp(2.5rem, 5vw, 3.5rem)",
-            fontWeight: 800,
-            margin: "0 0 15px",
-            textShadow: "2px 2px 4px rgba(0,0,0,0.2)",
+            fontSize: "clamp(3rem, 6vw, 4.5rem)",
+            fontWeight: 900,
+            margin: "0 0 20px",
+            textShadow: "3px 3px 6px rgba(0,0,0,0.5)",
+            lineHeight: "1.2",
+            maxWidth: "800px",
           }}
           variants={fadeUp}
         >
           Asset Library
         </motion.h1>
+
         <motion.p
           style={{
-            fontSize: "1.2rem",
+            fontSize: "1.3rem",
             opacity: 0.95,
             margin: 0,
+            maxWidth: "600px",
+            lineHeight: "1.6",
           }}
           variants={fadeUp}
         >
@@ -240,10 +268,13 @@ function LibraryPage() {
         <motion.aside
           style={{
             width: "280px",
-            background: "#fff",
+            background: "rgba(255, 255, 255, 0.05)",
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
             padding: "30px 25px",
             borderRadius: "20px",
-            boxShadow: "0 10px 30px rgba(0, 0, 0, 0.08)",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+            boxShadow: "0 10px 30px rgba(0, 0, 0, 0.3)",
             margin: "30px 0 30px 30px",
             height: "fit-content",
             position: "sticky",
@@ -258,7 +289,7 @@ function LibraryPage() {
             style={{
               fontSize: "1.5rem",
               fontWeight: 700,
-              color: "#333",
+              color: "#fff",
               marginTop: 0,
               marginBottom: "30px",
             }}
@@ -277,10 +308,10 @@ function LibraryPage() {
                 cursor: "pointer",
                 transition: "all 0.3s ease",
                 background: activeCategory === category.id
-                  ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-                  : "#f8f9fa",
+                  ? "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)"
+                  : "rgba(255, 255, 255, 0.05)",
                 boxShadow: activeCategory === category.id
-                  ? "0 5px 15px rgba(102, 126, 234, 0.3)"
+                  ? "0 5px 15px rgba(255, 107, 53, 0.3)"
                   : "none",
               }}
               whileHover={{ scale: 1.02 }}
@@ -296,14 +327,14 @@ function LibraryPage() {
                   className={category.icon}
                   style={{
                     fontSize: "1.2rem",
-                    color: activeCategory === category.id ? "#fff" : "#667eea",
+                    color: activeCategory === category.id ? "#fff" : "#ff6b35",
                   }}
                 ></i>
                 <h3
                   style={{
                     fontSize: "1rem",
                     fontWeight: 600,
-                    color: activeCategory === category.id ? "#fff" : "#333",
+                    color: activeCategory === category.id ? "#fff" : "rgba(255, 255, 255, 0.9)",
                     margin: 0,
                   }}
                 >
@@ -313,7 +344,7 @@ function LibraryPage() {
               <p
                 style={{
                   fontSize: "0.85rem",
-                  color: activeCategory === category.id ? "rgba(255,255,255,0.9)" : "#6c757d",
+                  color: activeCategory === category.id ? "rgba(255,255,255,0.9)" : "rgba(255, 255, 255, 0.6)",
                   paddingLeft: "32px",
                   margin: 0,
                 }}
@@ -335,8 +366,7 @@ function LibraryPage() {
               flexWrap: "wrap",
             }}
             initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
+            animate="visible"
             variants={fadeUp}
           >
             <input
@@ -348,33 +378,35 @@ function LibraryPage() {
                 flex: 1,
                 minWidth: "250px",
                 padding: "14px 20px",
-                border: "2px solid #e9ecef",
+                border: "2px solid rgba(255, 255, 255, 0.2)",
                 borderRadius: "12px",
                 fontSize: "1rem",
                 transition: "all 0.3s ease",
+                background: "rgba(255, 255, 255, 0.05)",
+                color: "#fff",
               }}
               onFocus={(e) => {
-                e.target.style.borderColor = "#667eea";
-                e.target.style.boxShadow = "0 0 0 4px rgba(102, 126, 234, 0.1)";
+                e.target.style.borderColor = "#ff6b35";
+                e.target.style.boxShadow = "0 0 0 4px rgba(255, 107, 53, 0.1)";
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = "#e9ecef";
+                e.target.style.borderColor = "rgba(255, 255, 255, 0.2)";
                 e.target.style.boxShadow = "none";
               }}
             />
             <motion.button
               style={{
                 padding: "14px 30px",
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                background: "rgba(255, 255, 255, 0.15)",
                 color: "#fff",
                 border: "none",
                 borderRadius: "12px",
                 fontSize: "1rem",
                 fontWeight: 600,
                 cursor: "pointer",
-                boxShadow: "0 8px 20px rgba(102, 126, 234, 0.3)",
+                boxShadow: "0 8px 20px rgba(0, 0, 0, 0.2)",
               }}
-              whileHover={{ scale: 1.02 }}
+              whileHover={{ scale: 1.02, background: "rgba(255, 255, 255, 0.2)" }}
               whileTap={{ scale: 0.98 }}
             >
               Search
@@ -382,7 +414,7 @@ function LibraryPage() {
             <motion.button
               style={{
                 padding: "14px 25px",
-                background: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
+                background: "rgba(255, 255, 255, 0.15)",
                 color: "#fff",
                 border: "none",
                 borderRadius: "12px",
@@ -392,9 +424,9 @@ function LibraryPage() {
                 display: "flex",
                 alignItems: "center",
                 gap: "8px",
-                boxShadow: "0 8px 20px rgba(67, 233, 123, 0.3)",
+                boxShadow: "0 8px 20px rgba(0, 0, 0, 0.2)",
               }}
-              whileHover={{ scale: 1.02 }}
+              whileHover={{ scale: 1.02, background: "rgba(255, 255, 255, 0.2)" }}
               whileTap={{ scale: 0.98 }}
             >
               <i className="fas fa-plus"></i>
@@ -413,8 +445,8 @@ function LibraryPage() {
                   marginBottom: "25px",
                 }}
               >
-                <h2 style={{ fontSize: "1.8rem", fontWeight: 700, margin: 0, color: "#333" }}>
-                  <i className="fas fa-newspaper" style={{ marginRight: "10px", color: "#667eea" }}></i>
+                <h2 style={{ fontSize: "1.8rem", fontWeight: 700, margin: 0, color: "#fff" }}>
+                  <i className="fas fa-newspaper" style={{ marginRight: "10px", color: "#ff6b35" }}></i>
                   최신 뉴스
                 </h2>
               </div>
@@ -459,8 +491,8 @@ function LibraryPage() {
                   marginBottom: "25px",
                 }}
               >
-                <h2 style={{ fontSize: "1.8rem", fontWeight: 700, margin: 0, color: "#333" }}>
-                  <i className="fas fa-blog" style={{ marginRight: "10px", color: "#f093fb" }}></i>
+                <h2 style={{ fontSize: "1.8rem", fontWeight: 700, margin: 0, color: "#fff" }}>
+                  <i className="fas fa-blog" style={{ marginRight: "10px", color: "#ff6b35" }}></i>
                   최신 블로그
                 </h2>
               </div>
@@ -505,8 +537,8 @@ function LibraryPage() {
                   marginBottom: "25px",
                 }}
               >
-                <h2 style={{ fontSize: "1.8rem", fontWeight: 700, margin: 0, color: "#333" }}>
-                  <i className="fas fa-file-alt" style={{ marginRight: "10px", color: "#667eea" }}></i>
+                <h2 style={{ fontSize: "1.8rem", fontWeight: 700, margin: 0, color: "#fff" }}>
+                  <i className="fas fa-file-alt" style={{ marginRight: "10px", color: "#ff6b35" }}></i>
                   논문
                 </h2>
               </div>
@@ -529,7 +561,7 @@ function LibraryPage() {
                 <h3 style={{
                   fontSize: "1.1rem",
                   fontWeight: 600,
-                  color: "#495057",
+                  color: "rgba(255, 255, 255, 0.9)",
                   marginBottom: "15px"
                 }}>
                   키워드 선택
@@ -552,16 +584,16 @@ function LibraryPage() {
                       cursor: "pointer",
                       transition: "all 0.3s ease",
                       background: activeKeyword === "all"
-                        ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-                        : "#fff",
-                      color: activeKeyword === "all" ? "#fff" : "#333",
+                        ? "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)"
+                        : "#4a4a4a",
+                      color: "#fff",
                       boxShadow: activeKeyword === "all"
-                        ? "0 6px 15px rgba(102, 126, 234, 0.3)"
-                        : "0 2px 8px rgba(0, 0, 0, 0.08)",
+                        ? "0 6px 15px rgba(255, 107, 53, 0.4)"
+                        : "0 2px 8px rgba(0, 0, 0, 0.3)",
                     }}
                     whileHover={{
                       scale: 1.05,
-                      boxShadow: "0 8px 20px rgba(102, 126, 234, 0.4)",
+                      boxShadow: "0 8px 20px rgba(255, 107, 53, 0.5)",
                     }}
                     whileTap={{ scale: 0.95 }}
                   >
@@ -580,16 +612,16 @@ function LibraryPage() {
                         cursor: "pointer",
                         transition: "all 0.3s ease",
                         background: activeKeyword === keyword
-                          ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-                          : "#fff",
-                        color: activeKeyword === keyword ? "#fff" : "#333",
+                          ? "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)"
+                          : "#4a4a4a",
+                        color: "#fff",
                         boxShadow: activeKeyword === keyword
-                          ? "0 6px 15px rgba(102, 126, 234, 0.3)"
-                          : "0 2px 8px rgba(0, 0, 0, 0.08)",
+                          ? "0 6px 15px rgba(255, 107, 53, 0.4)"
+                          : "0 2px 8px rgba(0, 0, 0, 0.3)",
                       }}
                       whileHover={{
                         scale: 1.05,
-                        boxShadow: "0 8px 20px rgba(102, 126, 234, 0.4)",
+                        boxShadow: "0 8px 20px rgba(255, 107, 53, 0.5)",
                       }}
                       whileTap={{ scale: 0.95 }}
                     >
@@ -704,10 +736,13 @@ function ContentCard({ item }) {
       target="_blank"
       rel="noopener noreferrer"
       style={{
-        backgroundColor: "#fff",
+        background: "rgba(255, 255, 255, 0.05)",
+        backdropFilter: "blur(10px)",
+        WebkitBackdropFilter: "blur(10px)",
         borderRadius: "15px",
         overflow: "hidden",
-        boxShadow: "0 5px 15px rgba(0, 0, 0, 0.08)",
+        border: "1px solid rgba(255, 255, 255, 0.1)",
+        boxShadow: "0 5px 15px rgba(0, 0, 0, 0.3)",
         transition: "all 0.3s ease",
         cursor: "pointer",
         position: "relative",
@@ -716,11 +751,13 @@ function ContentCard({ item }) {
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = "translateY(-8px)";
-        e.currentTarget.style.boxShadow = "0 15px 30px rgba(0, 0, 0, 0.15)";
+        e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
+        e.currentTarget.style.boxShadow = "0 15px 30px rgba(0, 0, 0, 0.5)";
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = "translateY(0)";
-        e.currentTarget.style.boxShadow = "0 5px 15px rgba(0, 0, 0, 0.08)";
+        e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+        e.currentTarget.style.boxShadow = "0 5px 15px rgba(0, 0, 0, 0.3)";
       }}
     >
       {/* Info */}
@@ -729,7 +766,7 @@ function ContentCard({ item }) {
           style={{
             fontSize: "1.1rem",
             fontWeight: 600,
-            color: "#333",
+            color: "#fff",
             margin: "0 0 12px",
             lineHeight: "1.5",
             overflow: "hidden",
@@ -745,19 +782,19 @@ function ContentCard({ item }) {
           alignItems: "center",
           gap: "8px",
           fontSize: "0.9rem",
-          color: "#6c757d",
+          color: "rgba(255, 255, 255, 0.7)",
         }}>
-          <i className="fas fa-calendar-alt" style={{ color: "#667eea" }}></i>
+          <i className="fas fa-calendar-alt" style={{ color: "#ff6b35" }}></i>
           <span>{item.pubdate}</span>
         </div>
         <div style={{
           marginTop: "12px",
           paddingTop: "12px",
-          borderTop: "1px solid #e9ecef",
+          borderTop: "1px solid rgba(255, 255, 255, 0.1)",
         }}>
           <span style={{
             fontSize: "0.85rem",
-            color: "#667eea",
+            color: "#ff6b35",
             fontWeight: 600,
             display: "flex",
             alignItems: "center",
@@ -780,10 +817,13 @@ function PaperCard({ paper }) {
       target="_blank"
       rel="noopener noreferrer"
       style={{
-        backgroundColor: "#fff",
+        background: "rgba(255, 255, 255, 0.05)",
+        backdropFilter: "blur(10px)",
+        WebkitBackdropFilter: "blur(10px)",
         borderRadius: "15px",
         overflow: "hidden",
-        boxShadow: "0 5px 15px rgba(0, 0, 0, 0.08)",
+        border: "1px solid rgba(255, 255, 255, 0.1)",
+        boxShadow: "0 5px 15px rgba(0, 0, 0, 0.3)",
         transition: "all 0.3s ease",
         cursor: "pointer",
         position: "relative",
@@ -792,11 +832,13 @@ function PaperCard({ paper }) {
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = "translateY(-8px)";
-        e.currentTarget.style.boxShadow = "0 15px 30px rgba(0, 0, 0, 0.15)";
+        e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
+        e.currentTarget.style.boxShadow = "0 15px 30px rgba(0, 0, 0, 0.5)";
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = "translateY(0)";
-        e.currentTarget.style.boxShadow = "0 5px 15px rgba(0, 0, 0, 0.08)";
+        e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+        e.currentTarget.style.boxShadow = "0 5px 15px rgba(0, 0, 0, 0.3)";
       }}
     >
       {/* Info */}
@@ -806,7 +848,7 @@ function PaperCard({ paper }) {
           <span style={{
             display: "inline-block",
             padding: "4px 12px",
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            background: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
             color: "#fff",
             borderRadius: "12px",
             fontSize: "0.8rem",
@@ -820,7 +862,7 @@ function PaperCard({ paper }) {
           style={{
             fontSize: "1.05rem",
             fontWeight: 600,
-            color: "#333",
+            color: "#fff",
             margin: "0 0 12px",
             lineHeight: "1.5",
             overflow: "hidden",
@@ -838,10 +880,10 @@ function PaperCard({ paper }) {
           alignItems: "center",
           gap: "6px",
           fontSize: "0.85rem",
-          color: "#6c757d",
+          color: "rgba(255, 255, 255, 0.7)",
           marginBottom: "8px",
         }}>
-          <i className="fas fa-user" style={{ color: "#667eea" }}></i>
+          <i className="fas fa-user" style={{ color: "#ff6b35" }}></i>
           <span style={{
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -855,10 +897,10 @@ function PaperCard({ paper }) {
           alignItems: "center",
           gap: "6px",
           fontSize: "0.85rem",
-          color: "#6c757d",
+          color: "rgba(255, 255, 255, 0.7)",
           marginBottom: "8px",
         }}>
-          <i className="fas fa-book" style={{ color: "#667eea" }}></i>
+          <i className="fas fa-book" style={{ color: "#ff6b35" }}></i>
           <span style={{
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -872,20 +914,20 @@ function PaperCard({ paper }) {
           alignItems: "center",
           gap: "6px",
           fontSize: "0.85rem",
-          color: "#6c757d",
+          color: "rgba(255, 255, 255, 0.7)",
         }}>
-          <i className="fas fa-calendar-alt" style={{ color: "#667eea" }}></i>
+          <i className="fas fa-calendar-alt" style={{ color: "#ff6b35" }}></i>
           <span>{paper.year}</span>
         </div>
 
         <div style={{
           marginTop: "12px",
           paddingTop: "12px",
-          borderTop: "1px solid #e9ecef",
+          borderTop: "1px solid rgba(255, 255, 255, 0.1)",
         }}>
           <span style={{
             fontSize: "0.85rem",
-            color: "#667eea",
+            color: "#ff6b35",
             fontWeight: 600,
             display: "flex",
             alignItems: "center",

@@ -11,6 +11,7 @@ import LoginPage from "./components/LoginPage";
 import ResourcesPage from "./components/ResourcesPage";
 import LibraryPage from "./components/LibraryPage";
 import AdminPage from "./components/AdminPage";
+import ResultsPage from "./components/ResultsPage";
 import "./App.css";  // 전체 공통 스타일
 
 function App() {
@@ -49,6 +50,16 @@ function App() {
               <AdminRoute>
                 <AdminPage />
               </AdminRoute>
+            }
+          />
+
+          {/* Results 페이지 - 로그인 필요 */}
+          <Route
+            path="/results/:projectId"
+            element={
+              <ProtectedRoute>
+                <ResultsPage />
+              </ProtectedRoute>
             }
           />
         </Routes>
