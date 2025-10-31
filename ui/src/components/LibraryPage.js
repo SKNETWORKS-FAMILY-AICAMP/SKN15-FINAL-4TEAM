@@ -1,10 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import Papa from "papaparse";
 import "../App.css";
 
 function LibraryPage() {
   const [searchText, setSearchText] = useState("");
-  const [activeFilter, setActiveFilter] = useState("All");
+  const [activeCategory, setActiveCategory] = useState("blog");
+  const [newsData, setNewsData] = useState([]);
+  const [blogData, setBlogData] = useState([]);
+  const [paperData, setPaperData] = useState([]);
+  const [paperKeywords, setPaperKeywords] = useState([]);
+  const [activeKeyword, setActiveKeyword] = useState("all");
+  const [currentPaperPage, setCurrentPaperPage] = useState(1);
+  const [isLoadingContent, setIsLoadingContent] = useState(true);
+  const [isLoadingPaper, setIsLoadingPaper] = useState(true);
+  const papersPerPage = 12;
 
   // Animation variants
   const fadeUp = {
@@ -22,146 +32,161 @@ function LibraryPage() {
     },
   };
 
+  // CSV 파일에서 데이터 로드
+  useEffect(() => {
+    // hanssem_contents.csv 로드
+    setIsLoadingContent(true);
+    fetch("/hanssem_contents.csv")
+      .then((response) => response.text())
+      .then((csvText) => {
+        Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            const data = results.data;
+
+            // 날짜 파싱 함수 (YYYY-MM-DD 형식)
+            const parseDate = (dateStr) => {
+              if (!dateStr) return new Date(0);
+              const parts = dateStr.split('-');
+              if (parts.length === 3) {
+                return new Date(parts[0], parts[1] - 1, parts[2]);
+              }
+              return new Date(dateStr);
+            };
+
+            // 뉴스와 블로그 데이터 분리 및 최신순 정렬
+            const news = data
+              .filter(item => item.source === 'news')
+              .sort((a, b) => parseDate(b.pubdate) - parseDate(a.pubdate))
+              .slice(0, 12); // 최신 12개
+
+            const blog = data
+              .filter(item => item.source === 'blog')
+              .sort((a, b) => parseDate(b.pubdate) - parseDate(a.pubdate))
+              .slice(0, 12); // 최신 12개
+
+            setNewsData(news);
+            setBlogData(blog);
+            setIsLoadingContent(false);
+          },
+        });
+      })
+      .catch((error) => {
+        console.error("hanssem_contents CSV 로드 오류:", error);
+        setIsLoadingContent(false);
+      });
+
+    // riss_FIN2.csv 로드 (논문 데이터)
+    setIsLoadingPaper(true);
+    fetch("/riss_FIN2.csv")
+      .then((response) => {
+        console.log("riss_FIN2.csv 응답 상태:", response.status);
+        return response.text();
+      })
+      .then((csvText) => {
+        console.log("riss_FIN2.csv 텍스트 길이:", csvText.length);
+        Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            console.log("파싱된 논문 데이터:", results.data.length, "개");
+            console.log("첫 번째 논문:", results.data[0]);
+
+            const data = results.data.map((item, index) => ({
+              id: `paper_${index}`,
+              database: item.database,
+              keyword: item.keyword,
+              title: item.title,
+              authors: item.authors,
+              publisher: item.publisher,
+              journal: item.journal,
+              issue: item.issue,
+              year: item.year,
+              link: item.link,
+            }));
+
+            console.log("가공된 논문 데이터:", data.length, "개");
+            setPaperData(data);
+
+            // keyword로 카테고리 추출
+            const uniqueKeywords = [...new Set(data.map((item) => item.keyword))].filter(Boolean);
+            console.log("추출된 키워드:", uniqueKeywords);
+            setPaperKeywords(uniqueKeywords);
+            setIsLoadingPaper(false);
+          },
+        });
+      })
+      .catch((error) => {
+        console.error("riss_FIN2 CSV 로드 오류:", error);
+        setIsLoadingPaper(false);
+      });
+  }, []);
+
   // 카테고리 데이터
   const categories = [
     {
+      id: "news",
       name: "News & Blogs",
       subtitle: "뉴스 & 블로그",
-      items: [],
+      icon: "fas fa-newspaper",
     },
     {
+      id: "blog",
+      name: "Blog Posts",
+      subtitle: "블로그 포스트",
+      icon: "fas fa-blog",
+    },
+    {
+      id: "paper",
       name: "Research Papers",
       subtitle: "논문",
-      items: [],
-    },
-    {
-      name: "Trends & Reports",
-      subtitle: "트렌드 & 리포트",
-      items: [],
-    },
-    {
-      name: "References & Guides",
-      subtitle: "레퍼런스",
-      items: [],
+      icon: "fas fa-file-alt",
     },
   ];
 
-  // 추천 자료 데이터 (목업)
-  const recommendedAssets = [
-    {
-      id: 1,
-      title: "미니멀리즘 컨셉 거실 디자인",
-      author: "서울 연대학",
-      rating: 4.9,
-      imageUrl: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=500",
-    },
-    {
-      id: 2,
-      title: "모던 키친 디자인 가이드 2024",
-      author: "한샘 디자인팀",
-      rating: 4.8,
-      imageUrl: "https://images.unsplash.com/photo-1556912172-45b7abe8b7e1?w=500",
-    },
-    {
-      id: 3,
-      title: "따뜻한 감성의 침실 인테리어",
-      author: "인테리어 스튜디오",
-      rating: 4.7,
-      imageUrl: "https://images.unsplash.com/photo-1616594039964-ae9021a400a0?w=500",
-    },
-    {
-      id: 4,
-      title: "우아한 다이닝룸 디자인",
-      author: "홈스타일링 연구소",
-      rating: 4.6,
-      imageUrl: "https://images.unsplash.com/photo-1617806118233-18e1de247200?w=500",
-    },
-    {
-      id: 5,
-      title: "편안한 욕실 디자인",
-      author: "공간 플래너",
-      rating: 4.5,
-      imageUrl: "https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=500",
-    },
-  ];
+  // 논문 필터링
+  const filteredPapers = activeKeyword === "all"
+    ? paperData
+    : paperData.filter(paper => paper.keyword === activeKeyword);
 
-  // 전체 자료 데이터 (목업)
-  const allAssets = [
-    {
-      id: 1,
-      title: "2024 모던 거실 트렌드",
-      author: "한샘 디자인팀",
-      rating: 4.7,
-      imageUrl: "https://images.unsplash.com/photo-1567016432779-094069958ea5?w=500",
-      category: "Design",
-    },
-    {
-      id: 2,
-      title: "내추럴 우드 플로링 가이드",
-      author: "건축 자재 연구소",
-      rating: 4.7,
-      imageUrl: "https://images.unsplash.com/photo-1615874959474-d609969a20ed?w=500",
-      category: "Trend",
-    },
-    {
-      id: 3,
-      title: "스마트 홈 인테리어 가이드",
-      author: "홈 IoT 연구소",
-      rating: 4.8,
-      imageUrl: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500",
-      category: "Education",
-    },
-    {
-      id: 4,
-      title: "아이를 위한 안전한 방",
-      author: "어린이 공간 연구소",
-      rating: 4.6,
-      imageUrl: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500",
-      category: "Human",
-    },
-    {
-      id: 5,
-      title: "북유럽 스타일 주방",
-      author: "디자인 허브",
-      rating: 4.9,
-      imageUrl: "https://images.unsplash.com/photo-1556911220-bff31c812dba?w=500",
-      category: "Design",
-    },
-    {
-      id: 6,
-      title: "맞춤형 가구 제작 가이드",
-      author: "가구 공방",
-      rating: 4.5,
-      imageUrl: "https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=500",
-      category: "Education",
-    },
-    {
-      id: 7,
-      title: "효율적인 수납 솔루션",
-      author: "정리 수납 전문가",
-      rating: 4.7,
-      imageUrl: "https://images.unsplash.com/photo-1595428774223-ef52624120d2?w=500",
-      category: "Philosophy",
-    },
-    {
-      id: 8,
-      title: "공간을 여는 조명 디자인",
-      author: "라이팅 스튜디오",
-      rating: 4.8,
-      imageUrl: "https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=500",
-      category: "Design",
-    },
-  ];
+  // 논문 페이지네이션
+  const totalPaperPages = Math.ceil(filteredPapers.length / papersPerPage);
+  const startPaperIndex = (currentPaperPage - 1) * papersPerPage;
+  const endPaperIndex = startPaperIndex + papersPerPage;
+  const currentPapers = filteredPapers.slice(startPaperIndex, endPaperIndex);
 
-  // 필터 버튼 데이터
-  const filters = ["All", "Design", "Human", "Philosophy", "Trend", "Education"];
+  // 페이지 번호 생성 (최대 10개)
+  const getPaperPageNumbers = () => {
+    const maxPagesToShow = 10;
+    const pages = [];
+    if (totalPaperPages <= maxPagesToShow) {
+      for (let i = 1; i <= totalPaperPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPaperPage <= 6) {
+        for (let i = 1; i <= 10; i++) {
+          pages.push(i);
+        }
+      } else if (currentPaperPage >= totalPaperPages - 5) {
+        for (let i = totalPaperPages - 9; i <= totalPaperPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        for (let i = currentPaperPage - 4; i <= currentPaperPage + 5; i++) {
+          pages.push(i);
+        }
+      }
+    }
+    return pages;
+  };
 
-  // 필터링 로직
-  const filteredAssets = allAssets.filter((asset) => {
-    const categoryMatch = activeFilter === "All" || asset.category === activeFilter;
-    const searchMatch = asset.title.toLowerCase().includes(searchText.toLowerCase());
-    return categoryMatch && searchMatch;
-  });
+  // 키워드 변경 시 페이지를 1로 리셋
+  useEffect(() => {
+    setCurrentPaperPage(1);
+  }, [activeKeyword]);
+
 
   return (
     <main
@@ -242,29 +267,60 @@ function LibraryPage() {
           </h2>
 
           {categories.map((category, index) => (
-            <div key={index} style={{ marginBottom: "25px" }}>
-              <h3
-                style={{
-                  fontSize: "1rem",
-                  fontWeight: 600,
-                  color: "#667eea",
-                  marginBottom: "10px",
-                  paddingLeft: "10px",
-                }}
-              >
-                {category.name}
-              </h3>
+            <motion.div
+              key={index}
+              onClick={() => setActiveCategory(category.id)}
+              style={{
+                marginBottom: "15px",
+                padding: "15px",
+                borderRadius: "12px",
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+                background: activeCategory === category.id
+                  ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                  : "#f8f9fa",
+                boxShadow: activeCategory === category.id
+                  ? "0 5px 15px rgba(102, 126, 234, 0.3)"
+                  : "none",
+              }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                marginBottom: "8px",
+              }}>
+                <i
+                  className={category.icon}
+                  style={{
+                    fontSize: "1.2rem",
+                    color: activeCategory === category.id ? "#fff" : "#667eea",
+                  }}
+                ></i>
+                <h3
+                  style={{
+                    fontSize: "1rem",
+                    fontWeight: 600,
+                    color: activeCategory === category.id ? "#fff" : "#333",
+                    margin: 0,
+                  }}
+                >
+                  {category.name}
+                </h3>
+              </div>
               <p
                 style={{
                   fontSize: "0.85rem",
-                  color: "#6c757d",
-                  paddingLeft: "10px",
+                  color: activeCategory === category.id ? "rgba(255,255,255,0.9)" : "#6c757d",
+                  paddingLeft: "32px",
                   margin: 0,
                 }}
               >
                 {category.subtitle}
               </p>
-            </div>
+            </motion.div>
           ))}
         </motion.aside>
 
@@ -346,149 +402,307 @@ function LibraryPage() {
             </motion.button>
           </motion.div>
 
-          {/* Recommended Section */}
-          <motion.section
-            style={{ marginBottom: "50px" }}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.2 }}
-            variants={staggerContainer}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "25px",
-              }}
-            >
-              <h2 style={{ fontSize: "1.8rem", fontWeight: 700, margin: 0, color: "#333" }}>
-                Recommended
-              </h2>
-              <a
-                href="#"
+          {/* Content Section */}
+          {activeCategory === "news" && (
+            <section style={{ marginBottom: "50px" }}>
+              <div
                 style={{
-                  color: "#667eea",
-                  textDecoration: "none",
-                  fontWeight: 600,
-                  fontSize: "1rem",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "25px",
                 }}
               >
-                See All &gt;
-              </a>
-            </div>
+                <h2 style={{ fontSize: "1.8rem", fontWeight: 700, margin: 0, color: "#333" }}>
+                  <i className="fas fa-newspaper" style={{ marginRight: "10px", color: "#667eea" }}></i>
+                  최신 뉴스
+                </h2>
+              </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-                gap: "20px",
-              }}
-            >
-              {recommendedAssets.map((asset) => (
-                <AssetCard key={asset.id} asset={asset} variants={fadeUp} />
-              ))}
-            </div>
-          </motion.section>
+              {isLoadingContent ? (
+                <div style={{
+                  textAlign: "center",
+                  padding: "100px 20px",
+                  color: "#667eea",
+                  fontSize: "1.2rem"
+                }}>
+                  <i className="fas fa-spinner fa-spin" style={{ fontSize: "3rem", marginBottom: "20px", display: "block" }}></i>
+                  뉴스 데이터를 불러오는 중...
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                    gap: "20px",
+                  }}
+                >
+                  {newsData.length > 0 ? (
+                    newsData.map((item, index) => (
+                      <ContentCard key={index} item={item} />
+                    ))
+                  ) : (
+                    <p style={{ color: "#6c757d", gridColumn: "1 / -1" }}>뉴스 데이터가 없습니다.</p>
+                  )}
+                </div>
+              )}
+            </section>
+          )}
 
-          {/* All Assets Section */}
-          <motion.section
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.2 }}
-            variants={staggerContainer}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "25px",
-                flexWrap: "wrap",
-                gap: "15px",
-              }}
-            >
-              <h2 style={{ fontSize: "1.8rem", fontWeight: 700, margin: 0, color: "#333" }}>
-                All Assets
-              </h2>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-                {filters.map((filter) => (
+          {activeCategory === "blog" && (
+            <section>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "25px",
+                }}
+              >
+                <h2 style={{ fontSize: "1.8rem", fontWeight: 700, margin: 0, color: "#333" }}>
+                  <i className="fas fa-blog" style={{ marginRight: "10px", color: "#f093fb" }}></i>
+                  최신 블로그
+                </h2>
+              </div>
+
+              {isLoadingContent ? (
+                <div style={{
+                  textAlign: "center",
+                  padding: "100px 20px",
+                  color: "#667eea",
+                  fontSize: "1.2rem"
+                }}>
+                  <i className="fas fa-spinner fa-spin" style={{ fontSize: "3rem", marginBottom: "20px", display: "block" }}></i>
+                  블로그 데이터를 불러오는 중...
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                    gap: "20px",
+                  }}
+                >
+                  {blogData.length > 0 ? (
+                    blogData.map((item, index) => (
+                      <ContentCard key={index} item={item} />
+                    ))
+                  ) : (
+                    <p style={{ color: "#6c757d", gridColumn: "1 / -1" }}>블로그 데이터를 불러오는 중...</p>
+                  )}
+                </div>
+              )}
+            </section>
+          )}
+
+          {activeCategory === "paper" && (
+            <section>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "25px",
+                }}
+              >
+                <h2 style={{ fontSize: "1.8rem", fontWeight: 700, margin: 0, color: "#333" }}>
+                  <i className="fas fa-file-alt" style={{ marginRight: "10px", color: "#667eea" }}></i>
+                  논문
+                </h2>
+              </div>
+
+              {isLoadingPaper ? (
+                <div style={{
+                  textAlign: "center",
+                  padding: "100px 20px",
+                  color: "#667eea",
+                  fontSize: "1.2rem"
+                }}>
+                  <i className="fas fa-spinner fa-spin" style={{ fontSize: "3rem", marginBottom: "20px", display: "block" }}></i>
+                  논문 데이터를 불러오는 중...
+                </div>
+              ) : (
+                <>
+
+              {/* Keyword 필터 */}
+              <div style={{ marginBottom: "30px" }}>
+                <h3 style={{
+                  fontSize: "1.1rem",
+                  fontWeight: 600,
+                  color: "#495057",
+                  marginBottom: "15px"
+                }}>
+                  키워드 선택
+                </h3>
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "10px",
+                  }}
+                >
                   <motion.button
-                    key={filter}
-                    onClick={() => setActiveFilter(filter)}
+                    onClick={() => setActiveKeyword("all")}
                     style={{
-                      padding: "8px 18px",
+                      padding: "10px 20px",
                       border: "none",
                       borderRadius: "20px",
-                      fontSize: "0.9rem",
+                      fontSize: "0.95rem",
                       fontWeight: 600,
                       cursor: "pointer",
                       transition: "all 0.3s ease",
-                      background:
-                        activeFilter === filter
-                          ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-                          : "#f0f0f0",
-                      color: activeFilter === filter ? "#fff" : "#555",
-                      boxShadow:
-                        activeFilter === filter
-                          ? "0 5px 15px rgba(102, 126, 234, 0.3)"
-                          : "none",
+                      background: activeKeyword === "all"
+                        ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                        : "#fff",
+                      color: activeKeyword === "all" ? "#fff" : "#333",
+                      boxShadow: activeKeyword === "all"
+                        ? "0 6px 15px rgba(102, 126, 234, 0.3)"
+                        : "0 2px 8px rgba(0, 0, 0, 0.08)",
                     }}
-                    whileHover={{ scale: 1.05 }}
+                    whileHover={{
+                      scale: 1.05,
+                      boxShadow: "0 8px 20px rgba(102, 126, 234, 0.4)",
+                    }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    {filter}
+                    전체
                   </motion.button>
-                ))}
+                  {paperKeywords.map((keyword) => (
+                    <motion.button
+                      key={keyword}
+                      onClick={() => setActiveKeyword(keyword)}
+                      style={{
+                        padding: "10px 20px",
+                        border: "none",
+                        borderRadius: "20px",
+                        fontSize: "0.95rem",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        transition: "all 0.3s ease",
+                        background: activeKeyword === keyword
+                          ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                          : "#fff",
+                        color: activeKeyword === keyword ? "#fff" : "#333",
+                        boxShadow: activeKeyword === keyword
+                          ? "0 6px 15px rgba(102, 126, 234, 0.3)"
+                          : "0 2px 8px rgba(0, 0, 0, 0.08)",
+                      }}
+                      whileHover={{
+                        scale: 1.05,
+                        boxShadow: "0 8px 20px rgba(102, 126, 234, 0.4)",
+                      }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      {keyword}
+                    </motion.button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-                gap: "20px",
-              }}
-            >
-              {filteredAssets.length > 0 ? (
-                filteredAssets.map((asset) => (
-                  <AssetCard key={asset.id} asset={asset} variants={fadeUp} />
-                ))
-              ) : (
+              {/* 논문 목록 */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                  gap: "20px",
+                  marginBottom: "40px",
+                }}
+              >
+                {currentPapers.length > 0 ? (
+                  currentPapers.map((paper) => (
+                    <PaperCard key={paper.id} paper={paper} variants={fadeUp} />
+                  ))
+                ) : (
+                  <p style={{ color: "#6c757d", gridColumn: "1 / -1" }}>
+                    {paperData.length === 0 ? "논문 데이터를 불러오는 중..." : "해당 키워드의 논문이 없습니다."}
+                  </p>
+                )}
+              </div>
+
+              {/* 페이지네이션 */}
+              {filteredPapers.length > 0 && totalPaperPages > 1 && (
                 <motion.div
                   style={{
-                    gridColumn: "1 / -1",
-                    textAlign: "center",
-                    padding: "60px 20px",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    gap: "8px",
+                    marginTop: "30px",
                   }}
-                  variants={fadeUp}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.3 }}
                 >
-                  <i
-                    className="fas fa-search"
-                    style={{
-                      fontSize: "4em",
-                      color: "#dee2e6",
-                      marginBottom: "20px",
-                      display: "block",
-                    }}
-                  ></i>
-                  <h3 style={{ fontSize: "1.5em", color: "#6c757d", margin: 0 }}>
-                    검색 결과가 없습니다
-                  </h3>
+                  <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
+                    {getPaperPageNumbers().map((page) => (
+                      <motion.button
+                        key={page}
+                        onClick={() => setCurrentPaperPage(page)}
+                        style={{
+                          padding: "8px 14px",
+                          border: currentPaperPage === page ? "2px solid #667eea" : "1px solid #dee2e6",
+                          borderRadius: "6px",
+                          fontSize: "0.95rem",
+                          fontWeight: currentPaperPage === page ? 700 : 500,
+                          cursor: "pointer",
+                          background: currentPaperPage === page ? "#667eea" : "#fff",
+                          color: currentPaperPage === page ? "#fff" : "#495057",
+                          transition: "all 0.2s ease",
+                          minWidth: "40px",
+                        }}
+                        whileHover={{
+                          scale: 1.05,
+                          borderColor: "#667eea",
+                        }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        {page}
+                      </motion.button>
+                    ))}
+
+                    {currentPaperPage < totalPaperPages && (
+                      <motion.button
+                        onClick={() => setCurrentPaperPage(prev => Math.min(prev + 1, totalPaperPages))}
+                        style={{
+                          padding: "8px 12px",
+                          border: "1px solid #dee2e6",
+                          borderRadius: "6px",
+                          fontSize: "0.9rem",
+                          cursor: "pointer",
+                          background: "#fff",
+                          color: "#667eea",
+                          transition: "all 0.2s ease",
+                        }}
+                        whileHover={{
+                          scale: 1.05,
+                          borderColor: "#667eea",
+                          background: "#f8f9fa",
+                        }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        다음 <i className="fas fa-chevron-right"></i>
+                      </motion.button>
+                    )}
+                  </div>
                 </motion.div>
               )}
-            </div>
-          </motion.section>
+              </>
+              )}
+            </section>
+          )}
         </div>
       </div>
     </main>
   );
 }
 
-// Asset Card Component
-function AssetCard({ asset, variants }) {
+// Content Card Component for News and Blog
+function ContentCard({ item }) {
   return (
-    <motion.div
+    <a
+      href={item.url}
+      target="_blank"
+      rel="noopener noreferrer"
       style={{
         backgroundColor: "#fff",
         borderRadius: "15px",
@@ -497,81 +711,192 @@ function AssetCard({ asset, variants }) {
         transition: "all 0.3s ease",
         cursor: "pointer",
         position: "relative",
+        textDecoration: "none",
+        display: "block",
       }}
-      variants={variants}
-      whileHover={{
-        y: -8,
-        boxShadow: "0 15px 30px rgba(0, 0, 0, 0.15)",
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = "translateY(-8px)";
+        e.currentTarget.style.boxShadow = "0 15px 30px rgba(0, 0, 0, 0.15)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "translateY(0)";
+        e.currentTarget.style.boxShadow = "0 5px 15px rgba(0, 0, 0, 0.08)";
       }}
     >
-      {/* Image */}
-      <div style={{ position: "relative", overflow: "hidden", height: "140px" }}>
-        <img
-          src={asset.imageUrl}
-          alt={asset.title}
+      {/* Info */}
+      <div style={{ padding: "20px" }}>
+        <h3
           style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            transition: "transform 0.3s ease",
+            fontSize: "1.1rem",
+            fontWeight: 600,
+            color: "#333",
+            margin: "0 0 12px",
+            lineHeight: "1.5",
+            overflow: "hidden",
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
           }}
-          onMouseEnter={(e) => {
-            e.target.style.transform = "scale(1.1)";
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.transform = "scale(1)";
-          }}
-          onError={(e) => {
-            e.target.src = "https://via.placeholder.com/500x300?text=No+Image";
-          }}
-        />
-        {/* Rating Badge */}
-        <div
-          style={{
-            position: "absolute",
-            top: "10px",
-            right: "10px",
-            background: "rgba(0, 0, 0, 0.7)",
-            backdropFilter: "blur(10px)",
-            color: "#fff",
-            padding: "5px 10px",
-            borderRadius: "8px",
+        >
+          {item.title}
+        </h3>
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          fontSize: "0.9rem",
+          color: "#6c757d",
+        }}>
+          <i className="fas fa-calendar-alt" style={{ color: "#667eea" }}></i>
+          <span>{item.pubdate}</span>
+        </div>
+        <div style={{
+          marginTop: "12px",
+          paddingTop: "12px",
+          borderTop: "1px solid #e9ecef",
+        }}>
+          <span style={{
             fontSize: "0.85rem",
+            color: "#667eea",
             fontWeight: 600,
             display: "flex",
             alignItems: "center",
             gap: "5px",
-          }}
-        >
-          <i className="fas fa-star" style={{ color: "#ffc107" }}></i>
-          {asset.rating}
+          }}>
+            자세히 보기
+            <i className="fas fa-arrow-right"></i>
+          </span>
         </div>
       </div>
+    </a>
+  );
+}
 
+// Paper Card Component for Research Papers
+function PaperCard({ paper }) {
+  return (
+    <a
+      href={paper.link}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        backgroundColor: "#fff",
+        borderRadius: "15px",
+        overflow: "hidden",
+        boxShadow: "0 5px 15px rgba(0, 0, 0, 0.08)",
+        transition: "all 0.3s ease",
+        cursor: "pointer",
+        position: "relative",
+        textDecoration: "none",
+        display: "block",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = "translateY(-8px)";
+        e.currentTarget.style.boxShadow = "0 15px 30px rgba(0, 0, 0, 0.15)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "translateY(0)";
+        e.currentTarget.style.boxShadow = "0 5px 15px rgba(0, 0, 0, 0.08)";
+      }}
+    >
       {/* Info */}
-      <div style={{ padding: "15px" }}>
+      <div style={{ padding: "20px" }}>
+        {/* Keyword Badge */}
+        <div style={{ marginBottom: "12px" }}>
+          <span style={{
+            display: "inline-block",
+            padding: "4px 12px",
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            color: "#fff",
+            borderRadius: "12px",
+            fontSize: "0.8rem",
+            fontWeight: 600,
+          }}>
+            {paper.keyword}
+          </span>
+        </div>
+
         <h3
           style={{
-            fontSize: "1rem",
+            fontSize: "1.05rem",
             fontWeight: 600,
             color: "#333",
-            margin: "0 0 8px",
-            lineHeight: "1.4",
+            margin: "0 0 12px",
+            lineHeight: "1.5",
+            overflow: "hidden",
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
           }}
         >
-          {asset.title}
+          {paper.title}
         </h3>
-        <p
-          style={{
+
+        {/* Authors */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          fontSize: "0.85rem",
+          color: "#6c757d",
+          marginBottom: "8px",
+        }}>
+          <i className="fas fa-user" style={{ color: "#667eea" }}></i>
+          <span style={{
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}>{paper.authors}</span>
+        </div>
+
+        {/* Journal & Year */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          fontSize: "0.85rem",
+          color: "#6c757d",
+          marginBottom: "8px",
+        }}>
+          <i className="fas fa-book" style={{ color: "#667eea" }}></i>
+          <span style={{
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}>{paper.journal}</span>
+        </div>
+
+        {/* Year */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          fontSize: "0.85rem",
+          color: "#6c757d",
+        }}>
+          <i className="fas fa-calendar-alt" style={{ color: "#667eea" }}></i>
+          <span>{paper.year}</span>
+        </div>
+
+        <div style={{
+          marginTop: "12px",
+          paddingTop: "12px",
+          borderTop: "1px solid #e9ecef",
+        }}>
+          <span style={{
             fontSize: "0.85rem",
-            color: "#6c757d",
-            margin: 0,
-          }}
-        >
-          by {asset.author}
-        </p>
+            color: "#667eea",
+            fontWeight: 600,
+            display: "flex",
+            alignItems: "center",
+            gap: "5px",
+          }}>
+            논문 보기
+            <i className="fas fa-arrow-right"></i>
+          </span>
+        </div>
       </div>
-    </motion.div>
+    </a>
   );
 }
 

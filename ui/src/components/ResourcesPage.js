@@ -1,10 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import Papa from "papaparse";
 import "../App.css";
 
 function ResourcesPage() {
-  const [activeCategory, setActiveCategory] = useState("all");
+  const [activeRoomCategory, setActiveRoomCategory] = useState("all");
+  const [activeSmallCategory, setActiveSmallCategory] = useState("all");
   const [searchText, setSearchText] = useState("");
+  const [furnitureData, setFurnitureData] = useState([]);
+  const [roomCategories, setRoomCategories] = useState([]);
+  const [smallCategories, setSmallCategories] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const itemsPerPage = 12;
 
   // Animation variants
   const fadeUp = {
@@ -22,82 +30,151 @@ function ResourcesPage() {
     },
   };
 
-  // 목업 데이터 - 나중에 DB에서 가져올 데이터
-  // TODO: API 연동 시 이 부분을 fetch/axios로 교체
-  const furnitureData = [
-    {
-      id: 1,
-      category: "sofa",
-      name: "제로 501 3인용 가죽 소파",
-      description: "착좌감이 편안한 부드러운 가죽 소파로, 거실을 우아하게 연출합니다.",
-      imageUrl: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500",
-    },
-    {
-      id: 2,
-      category: "bed",
-      name: "제로 503 침대",
-      description: "깔끔한 디자인과 견고한 프레임으로 수면을 돕는 침대입니다.",
-      imageUrl: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=500",
-    },
-    {
-      id: 3,
-      category: "table",
-      name: "제로 502 다이닝 테이블",
-      description: "모던한 디자인의 다이닝 테이블로, 가족 식사 공간을 업그레이드합니다.",
-      imageUrl: "https://images.unsplash.com/photo-1517705008128-361805f42e86?w=500",
-    },
-    {
-      id: 4,
-      category: "storage",
-      name: "제로 504 5단 서랍장",
-      description: "넉넉한 수납 공간과 세련된 디자인으로 어떤 공간에도 잘 어울립니다.",
-      imageUrl: "https://images.unsplash.com/photo-1592078615290-033ee584e267?w=500",
-    },
-    {
-      id: 5,
-      category: "sofa",
-      name: "컴포트 릴렉스 소파",
-      description: "깊이감 있는 좌방석과 편안한 등받이로 완벽한 휴식을 제공합니다.",
-      imageUrl: "https://images.unsplash.com/photo-1550254478-ead40cc54513?w=500",
-    },
-    {
-      id: 6,
-      category: "bed",
-      name: "모던 플랫폼 침대",
-      description: "침대 아래 평판이 통합된 플랫폼으로 실용적이며 공간 효율적입니다.",
-      imageUrl: "https://images.unsplash.com/photo-1540574163026-643ea20ade25?w=500",
-    },
-    {
-      id: 7,
-      category: "table",
-      name: "루체 콘솔 테이블",
-      description: "현관이나 거실에 포인트를 주는 슬림한 디자인의 콘솔 테이블입니다.",
-      imageUrl: "https://images.unsplash.com/photo-1557979619-445218f326b9?w=500",
-    },
-    {
-      id: 8,
-      category: "storage",
-      name: "키즈 수납장",
-      description: "아이들의 장난감이나 옷을 깔끔하게 정리할 수 있는 다용도 수납장입니다.",
-      imageUrl: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500",
-    },
-  ];
+  // CSV 파일에서 데이터 로드
+  useEffect(() => {
+    setIsLoading(true);
+    fetch("/20251020_가구종합.csv")
+      .then((response) => response.text())
+      .then((csvText) => {
+        Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            const data = results.data.map((item, index) => ({
+              id: `${item.goods_id}_${index}`,
+              goods_id: item.goods_id,
+              name: item.goods_name,
+              price: item.price,
+              imageUrl: item["Image URL"],
+              roomName: item.room_name,
+              smallCatName: item.small_cat_name,
+            }));
 
-  // 카테고리 버튼 데이터
-  const categories = [
-    { id: "all", label: "전체", icon: "fas fa-th" },
-    { id: "sofa", label: "소파", icon: "fas fa-couch" },
-    { id: "bed", label: "침대", icon: "fas fa-bed" },
-    { id: "table", label: "식탁/테이블", icon: "fas fa-table" },
-    { id: "storage", label: "수납장", icon: "fas fa-box" },
-  ];
+            setFurnitureData(data);
+            setIsLoading(false);
+
+            // room_name으로 카테고리 추출
+            const uniqueRooms = [...new Set(data.map((item) => item.roomName))].filter(Boolean);
+            setRoomCategories([{ id: "all", label: "전체" }, ...uniqueRooms.map((room) => ({ id: room, label: room }))]);
+
+            // small_cat_name으로 서브 카테고리 추출
+            const uniqueSmallCats = [...new Set(data.map((item) => item.smallCatName))].filter(Boolean);
+
+            // 단일 단어 카테고리와 복합 단어 카테고리 분리
+            const singleWordCats = uniqueSmallCats.filter(cat => {
+              const words = cat.trim().split(/[\s,/]+/);
+              return words.length === 1;
+            });
+
+            const multiWordCats = uniqueSmallCats.filter(cat => {
+              const words = cat.trim().split(/[\s,/]+/);
+              return words.length > 1;
+            });
+
+            // 카테고리 구성: 전체 + 단일 단어 + 세트
+            const categories = [
+              { id: "all", label: "전체" },
+              ...singleWordCats.map((cat) => ({ id: cat, label: cat })),
+            ];
+
+            // 복합 단어 카테고리가 있으면 "세트" 추가
+            if (multiWordCats.length > 0) {
+              categories.push({ id: "set", label: "세트" });
+            }
+
+            setSmallCategories(categories);
+          },
+        });
+      })
+      .catch((error) => {
+        console.error("CSV 로드 오류:", error);
+        setIsLoading(false);
+      });
+  }, []);
 
   // 필터링 로직
   const filteredFurniture = furnitureData.filter((item) => {
-    const categoryMatch = activeCategory === "all" || item.category === activeCategory;
-    const searchMatch = item.name.toLowerCase().includes(searchText.toLowerCase());
-    return categoryMatch && searchMatch;
+    const roomMatch = activeRoomCategory === "all" || item.roomName === activeRoomCategory;
+
+    // "세트" 카테고리 선택 시: 2개 이상의 단어를 가진 카테고리만 표시
+    let smallCatMatch;
+    if (activeSmallCategory === "set") {
+      const words = item.smallCatName?.trim().split(/[\s,/]+/) || [];
+      smallCatMatch = words.length > 1;
+    } else if (activeSmallCategory === "all") {
+      smallCatMatch = true;
+    } else {
+      smallCatMatch = item.smallCatName === activeSmallCategory;
+    }
+
+    const searchMatch = item.name?.toLowerCase().includes(searchText.toLowerCase());
+    return roomMatch && smallCatMatch && searchMatch;
   });
+
+  // 페이지네이션 계산
+  const totalPages = Math.ceil(filteredFurniture.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentFurniture = filteredFurniture.slice(startIndex, endIndex);
+
+  // 카테고리 변경 시 페이지를 1로 리셋
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeRoomCategory, activeSmallCategory, searchText]);
+
+  // 페이지 번호 생성 함수 (최대 10개까지만 표시)
+  const getPageNumbers = () => {
+    const maxPagesToShow = 10;
+    const pages = [];
+
+    if (totalPages <= maxPagesToShow) {
+      // 페이지가 10개 이하면 모두 표시
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // 페이지가 10개 초과일 때
+      if (currentPage <= 6) {
+        // 앞쪽에 있을 때: 1 2 3 4 5 6 7 8 9 10
+        for (let i = 1; i <= 10; i++) {
+          pages.push(i);
+        }
+      } else if (currentPage >= totalPages - 5) {
+        // 뒤쪽에 있을 때: (totalPages-9) ... totalPages
+        for (let i = totalPages - 9; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        // 중간에 있을 때: (currentPage-4) ... (currentPage+5)
+        for (let i = currentPage - 4; i <= currentPage + 5; i++) {
+          pages.push(i);
+        }
+      }
+    }
+
+    return pages;
+  };
+
+  // room 카테고리 변경 시 small 카테고리 필터링
+  const availableSmallCategories = activeRoomCategory === "all"
+    ? smallCategories
+    : (() => {
+        const filteredCats = smallCategories.filter((cat) => {
+          if (cat.id === "all" || cat.id === "set") return true;
+          return furnitureData.some(
+            (item) => item.roomName === activeRoomCategory && item.smallCatName === cat.id
+          );
+        });
+
+        // "세트" 카테고리가 해당 room에 복합 단어 카테고리가 있는지 확인
+        const hasMultiWord = furnitureData.some((item) => {
+          if (item.roomName !== activeRoomCategory) return false;
+          const words = item.smallCatName?.trim().split(/[\s,/]+/) || [];
+          return words.length > 1;
+        });
+
+        return filteredCats.filter(cat => cat.id !== "set" || hasMultiWord);
+      })();
 
   return (
     <main
@@ -157,51 +234,113 @@ function ResourcesPage() {
         viewport={{ once: true }}
         variants={fadeUp}
       >
-        {/* Category Filters */}
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "12px",
-            justifyContent: "center",
-            marginBottom: "30px",
-          }}
-        >
-          {categories.map((category) => (
-            <motion.button
-              key={category.id}
-              onClick={() => setActiveCategory(category.id)}
-              style={{
-                padding: "12px 24px",
-                border: "none",
-                borderRadius: "25px",
-                fontSize: "1rem",
-                fontWeight: 600,
-                cursor: "pointer",
-                transition: "all 0.3s ease",
-                background:
-                  activeCategory === category.id
-                    ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-                    : "#fff",
-                color: activeCategory === category.id ? "#fff" : "#333",
-                boxShadow:
-                  activeCategory === category.id
-                    ? "0 8px 20px rgba(102, 126, 234, 0.3)"
-                    : "0 2px 8px rgba(0, 0, 0, 0.08)",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-              }}
-              whileHover={{
-                scale: 1.05,
-                boxShadow: "0 10px 25px rgba(102, 126, 234, 0.4)",
-              }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <i className={category.icon}></i>
-              {category.label}
-            </motion.button>
-          ))}
+        {/* Room Category Filters (큰 카테고리) */}
+        <div style={{ marginBottom: "20px" }}>
+          <h3 style={{
+            textAlign: "center",
+            fontSize: "1.1rem",
+            fontWeight: 600,
+            color: "#495057",
+            marginBottom: "15px"
+          }}>
+            공간 선택
+          </h3>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "12px",
+              justifyContent: "center",
+            }}
+          >
+            {roomCategories.map((category) => (
+              <motion.button
+                key={category.id}
+                onClick={() => {
+                  setActiveRoomCategory(category.id);
+                  setActiveSmallCategory("all");
+                }}
+                style={{
+                  padding: "12px 24px",
+                  border: "none",
+                  borderRadius: "25px",
+                  fontSize: "1rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  transition: "all 0.3s ease",
+                  background:
+                    activeRoomCategory === category.id
+                      ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                      : "#fff",
+                  color: activeRoomCategory === category.id ? "#fff" : "#333",
+                  boxShadow:
+                    activeRoomCategory === category.id
+                      ? "0 8px 20px rgba(102, 126, 234, 0.3)"
+                      : "0 2px 8px rgba(0, 0, 0, 0.08)",
+                }}
+                whileHover={{
+                  scale: 1.05,
+                  boxShadow: "0 10px 25px rgba(102, 126, 234, 0.4)",
+                }}
+                whileTap={{ scale: 0.95 }}
+              >
+                {category.label}
+              </motion.button>
+            ))}
+          </div>
+        </div>
+
+        {/* Small Category Filters (작은 카테고리) */}
+        <div style={{ marginBottom: "30px" }}>
+          <h3 style={{
+            textAlign: "center",
+            fontSize: "1.1rem",
+            fontWeight: 600,
+            color: "#495057",
+            marginBottom: "15px"
+          }}>
+            가구 종류
+          </h3>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "12px",
+              justifyContent: "center",
+            }}
+          >
+            {availableSmallCategories.map((category) => (
+              <motion.button
+                key={category.id}
+                onClick={() => setActiveSmallCategory(category.id)}
+                style={{
+                  padding: "10px 20px",
+                  border: "none",
+                  borderRadius: "20px",
+                  fontSize: "0.95rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  transition: "all 0.3s ease",
+                  background:
+                    activeSmallCategory === category.id
+                      ? "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)"
+                      : "#fff",
+                  color: activeSmallCategory === category.id ? "#fff" : "#333",
+                  boxShadow:
+                    activeSmallCategory === category.id
+                      ? "0 6px 15px rgba(245, 87, 108, 0.3)"
+                      : "0 2px 8px rgba(0, 0, 0, 0.08)",
+                }}
+                whileHover={{
+                  scale: 1.05,
+                  boxShadow: "0 8px 20px rgba(245, 87, 108, 0.4)",
+                }}
+                whileTap={{ scale: 0.95 }}
+              >
+                {category.label}
+              </motion.button>
+            ))}
+          </div>
         </div>
 
         {/* Search Bar */}
@@ -251,70 +390,99 @@ function ResourcesPage() {
       </motion.div>
 
       {/* Furniture Grid */}
-      <motion.div
+      <div
         style={{
           maxWidth: "1200px",
           margin: "0 auto",
           padding: "0 20px",
         }}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.1 }}
-        variants={staggerContainer}
       >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-            gap: "30px",
-          }}
-        >
-          {filteredFurniture.length > 0 ? (
-            filteredFurniture.map((item) => (
-              <motion.div
-                key={item.id}
-                style={{
-                  backgroundColor: "#fff",
-                  borderRadius: "20px",
-                  overflow: "hidden",
-                  boxShadow: "0 10px 30px rgba(0, 0, 0, 0.08)",
-                  transition: "all 0.3s ease",
-                  cursor: "pointer",
-                }}
-                variants={fadeUp}
-                whileHover={{
-                  y: -10,
-                  boxShadow: "0 20px 40px rgba(0, 0, 0, 0.15)",
-                }}
-              >
-                {/* Image */}
+        {isLoading ? (
+          <div style={{
+            textAlign: "center",
+            padding: "100px 20px",
+            color: "#667eea",
+            fontSize: "1.2rem"
+          }}>
+            <i className="fas fa-spinner fa-spin" style={{ fontSize: "3rem", marginBottom: "20px", display: "block" }}></i>
+            가구 데이터를 불러오는 중...
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+              gap: "30px",
+            }}
+          >
+            {currentFurniture.length > 0 ? (
+              currentFurniture.map((item) => (
                 <div
+                  key={item.id}
                   style={{
-                    width: "100%",
-                    height: "220px",
+                    backgroundColor: "#fff",
+                    borderRadius: "20px",
                     overflow: "hidden",
-                    position: "relative",
+                    boxShadow: "0 10px 30px rgba(0, 0, 0, 0.08)",
+                    transition: "all 0.3s ease",
+                    cursor: "pointer",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-10px)";
+                    e.currentTarget.style.boxShadow = "0 20px 40px rgba(0, 0, 0, 0.15)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "0 10px 30px rgba(0, 0, 0, 0.08)";
                   }}
                 >
-                  <img
-                    src={item.imageUrl}
-                    alt={item.name}
+                  {/* Image */}
+                  <div
                     style={{
                       width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                      transition: "transform 0.3s ease",
+                      height: "220px",
+                      overflow: "hidden",
+                      position: "relative",
+                      backgroundColor: "#f0f0f0",
                     }}
-                    onMouseEnter={(e) => {
-                      e.target.style.transform = "scale(1.1)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = "scale(1)";
-                    }}
-                    onError={(e) => {
-                      e.target.src = "https://via.placeholder.com/500x300?text=No+Image";
-                    }}
-                  />
+                  >
+                    {item.imageUrl ? (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.name}
+                        loading="lazy"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          transition: "transform 0.3s ease",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.transform = "scale(1.1)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.transform = "scale(1)";
+                        }}
+                        onError={(e) => {
+                          e.target.style.display = "none";
+                          e.target.nextSibling.style.display = "flex";
+                        }}
+                      />
+                    ) : null}
+                    <div
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        display: item.imageUrl ? "none" : "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: "#f0f0f0",
+                        color: "#999",
+                        fontSize: "1rem",
+                      }}
+                    >
+                      이미지 없음
+                    </div>
                   {/* Category Badge */}
                   <div
                     style={{
@@ -330,7 +498,7 @@ function ResourcesPage() {
                       color: "#667eea",
                     }}
                   >
-                    {categories.find((c) => c.id === item.category)?.label || item.category}
+                    {item.smallCatName}
                   </div>
                 </div>
 
@@ -346,27 +514,36 @@ function ResourcesPage() {
                   >
                     {item.name}
                   </h3>
-                  <p
-                    style={{
-                      fontSize: "0.95em",
+                  <div style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "8px"
+                  }}>
+                    <span style={{
+                      fontSize: "0.9em",
                       color: "#6c757d",
-                      lineHeight: "1.6",
-                      margin: 0,
-                    }}
-                  >
-                    {item.description}
-                  </p>
+                    }}>
+                      {item.roomName}
+                    </span>
+                    <span style={{
+                      fontSize: "1.1em",
+                      fontWeight: 700,
+                      color: "#667eea",
+                    }}>
+                      {item.price ? `₩${parseInt(item.price).toLocaleString()}` : ""}
+                    </span>
+                  </div>
                 </div>
-              </motion.div>
+              </div>
             ))
           ) : (
-            <motion.div
+            <div
               style={{
                 gridColumn: "1 / -1",
                 textAlign: "center",
                 padding: "60px 20px",
               }}
-              variants={fadeUp}
             >
               <i
                 className="fas fa-search"
@@ -383,28 +560,82 @@ function ResourcesPage() {
               <p style={{ color: "#adb5bd", marginTop: "10px" }}>
                 다른 검색어나 카테고리를 선택해보세요
               </p>
-            </motion.div>
+            </div>
           )}
-        </div>
-      </motion.div>
+          </div>
+        )}
+      </div>
 
-      {/* Results Count */}
-      {filteredFurniture.length > 0 && (
+      {/* Pagination */}
+      {filteredFurniture.length > 0 && totalPages > 1 && (
         <motion.div
           style={{
-            textAlign: "center",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: "8px",
             marginTop: "50px",
-            color: "#6c757d",
-            fontSize: "1rem",
+            marginBottom: "30px",
           }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
         >
-          총 <strong style={{ color: "#667eea" }}>{filteredFurniture.length}</strong>개의 가구를
-          찾았습니다
+          <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
+            {getPageNumbers().map((page) => (
+              <motion.button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                style={{
+                  padding: "8px 14px",
+                  border: currentPage === page ? "2px solid #667eea" : "1px solid #dee2e6",
+                  borderRadius: "6px",
+                  fontSize: "0.95rem",
+                  fontWeight: currentPage === page ? 700 : 500,
+                  cursor: "pointer",
+                  background: currentPage === page ? "#667eea" : "#fff",
+                  color: currentPage === page ? "#fff" : "#495057",
+                  transition: "all 0.2s ease",
+                  minWidth: "40px",
+                }}
+                whileHover={{
+                  scale: 1.05,
+                  borderColor: "#667eea",
+                }}
+                whileTap={{ scale: 0.95 }}
+              >
+                {page}
+              </motion.button>
+            ))}
+
+            {/* 다음 페이지 화살표 */}
+            {currentPage < totalPages && (
+              <motion.button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                style={{
+                  padding: "8px 12px",
+                  border: "1px solid #dee2e6",
+                  borderRadius: "6px",
+                  fontSize: "0.9rem",
+                  cursor: "pointer",
+                  background: "#fff",
+                  color: "#667eea",
+                  transition: "all 0.2s ease",
+                }}
+                whileHover={{
+                  scale: 1.05,
+                  borderColor: "#667eea",
+                  background: "#f8f9fa",
+                }}
+                whileTap={{ scale: 0.95 }}
+              >
+                다음 <i className="fas fa-chevron-right"></i>
+              </motion.button>
+            )}
+          </div>
         </motion.div>
       )}
+
     </main>
   );
 }
