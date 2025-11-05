@@ -63,6 +63,7 @@ export function AuthProvider({ children }) {
         };
         setUser(userData);
         localStorage.setItem("currentUser", JSON.stringify(userData));
+        localStorage.setItem("user_id", foundUser.username); // user_id 저장
         return { success: true };
       } else {
         // 상태값이 없거나 다른 값인 경우 (기존 사용자 호환성)
@@ -74,6 +75,7 @@ export function AuthProvider({ children }) {
         };
         setUser(userData);
         localStorage.setItem("currentUser", JSON.stringify(userData));
+        localStorage.setItem("user_id", foundUser.username); // user_id 저장
         return { success: true };
       }
     } else if (users.some((u) => u.username === username)) {
@@ -89,6 +91,7 @@ export function AuthProvider({ children }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem("currentUser");
+    localStorage.removeItem("user_id");
   };
 
   // 회원가입 함수 (관리자 승인 대기 상태로 저장)

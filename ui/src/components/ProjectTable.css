@@ -1,0 +1,19 @@
+.project-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.project-table th,
+.project-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #ddd;
+}
+
+.project-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  text-align: left;
+}

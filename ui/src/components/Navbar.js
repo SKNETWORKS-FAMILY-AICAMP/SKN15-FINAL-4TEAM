@@ -28,27 +28,49 @@ function Navbar() {
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        background: "rgba(255, 255, 255, 0.98)",
+        background: "rgba(10, 10, 10, 0.95)",
         backdropFilter: "blur(10px)",
+        WebkitBackdropFilter: "blur(10px)",
         padding: "16px 40px",
-        boxShadow: "0 2px 20px rgba(0, 0, 0, 0.08)",
+        boxShadow: "0 2px 20px rgba(0, 0, 0, 0.5)",
         position: "sticky",
         top: 0,
         zIndex: 1000,
-        borderBottom: "1px solid rgba(102, 126, 234, 0.1)",
+        borderBottom: "1px solid rgba(255, 107, 53, 0.2)",
       }}
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
     >
       {/* Logo */}
-      <Link to="/" style={{ textDecoration: "none" }}>
+      <Link to="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "12px" }}>
+        <motion.div
+          style={{
+            width: "45px",
+            height: "45px",
+            background: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
+            borderRadius: "8px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "2rem",
+            fontWeight: 900,
+            color: "#fff",
+            boxShadow: "0 4px 10px rgba(255, 107, 53, 0.3)",
+            lineHeight: "0.85",
+            paddingBottom: "2px",
+          }}
+          whileHover={{ scale: 1.05, boxShadow: "0 6px 15px rgba(255, 107, 53, 0.4)" }}
+          whileTap={{ scale: 0.95 }}
+        >
+          A
+        </motion.div>
         <motion.h1
           style={{
             fontSize: "1.8rem",
             fontWeight: 800,
             margin: 0,
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            background: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
             backgroundClip: "text",
@@ -88,9 +110,9 @@ function Navbar() {
                   borderRadius: "12px",
                   fontSize: "1rem",
                   fontWeight: 600,
-                  color: isActive(item.path) ? "#fff" : "#333",
+                  color: isActive(item.path) ? "#fff" : "rgba(255, 255, 255, 0.8)",
                   background: isActive(item.path)
-                    ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                    ? "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)"
                     : "transparent",
                   cursor: "pointer",
                   transition: "all 0.3s ease",
@@ -98,7 +120,7 @@ function Navbar() {
                 }}
                 whileHover={{
                   scale: 1.05,
-                  backgroundColor: isActive(item.path) ? undefined : "#f8f9fa",
+                  backgroundColor: isActive(item.path) ? undefined : "rgba(255, 255, 255, 0.1)",
                 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -127,7 +149,7 @@ function Navbar() {
       {/* Login/Logout Button */}
       {isAuthenticated ? (
         <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-          <span style={{ fontSize: "0.95rem", color: "#6c757d", fontWeight: 500 }}>
+          <span style={{ fontSize: "0.95rem", color: "rgba(255, 255, 255, 0.8)", fontWeight: 500 }}>
             {user?.username}님
           </span>
           <motion.button
@@ -136,17 +158,17 @@ function Navbar() {
               padding: "10px 28px",
               border: "2px solid transparent",
               borderRadius: "12px",
-              background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+              background: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
               color: "#fff",
               fontSize: "1rem",
               fontWeight: 700,
               cursor: "pointer",
-              boxShadow: "0 4px 15px rgba(240, 147, 251, 0.3)",
+              boxShadow: "0 4px 15px rgba(255, 107, 53, 0.3)",
               transition: "all 0.3s ease",
             }}
             whileHover={{
               scale: 1.05,
-              boxShadow: "0 6px 20px rgba(240, 147, 251, 0.4)",
+              boxShadow: "0 6px 20px rgba(255, 107, 53, 0.5)",
             }}
             whileTap={{ scale: 0.95 }}
           >
@@ -160,17 +182,17 @@ function Navbar() {
               padding: "10px 28px",
               border: "2px solid transparent",
               borderRadius: "12px",
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              background: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
               color: "#fff",
               fontSize: "1rem",
               fontWeight: 700,
               cursor: "pointer",
-              boxShadow: "0 4px 15px rgba(102, 126, 234, 0.3)",
+              boxShadow: "0 4px 15px rgba(255, 107, 53, 0.3)",
               transition: "all 0.3s ease",
             }}
             whileHover={{
               scale: 1.05,
-              boxShadow: "0 6px 20px rgba(102, 126, 234, 0.4)",
+              boxShadow: "0 6px 20px rgba(255, 107, 53, 0.5)",
             }}
             whileTap={{ scale: 0.95 }}
           >

@@ -16,8 +16,8 @@ function ResourcesPage() {
 
   // Animation variants
   const fadeUp = {
-    hidden: { opacity: 0, y: 40 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
   };
 
   const staggerContainer = {
@@ -25,7 +25,7 @@ function ResourcesPage() {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.1,
+        staggerChildren: 0.05,
       },
     },
   };
@@ -180,7 +180,7 @@ function ResourcesPage() {
     <main
       style={{
         minHeight: "100vh",
-        background: "linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%)",
+        background: "#0a0a0a",
         paddingTop: "0",
         marginTop: "0",
       }}
@@ -188,33 +188,63 @@ function ResourcesPage() {
       {/* Header Section */}
       <motion.div
         style={{
-          textAlign: "center",
-          padding: "60px 20px 40px",
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          position: "relative",
+          height: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "flex-start",
+          padding: "0 80px",
+          background: "linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=2000&auto=format&fit=crop') center/cover no-repeat",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
           color: "#fff",
-          marginBottom: "50px",
+          marginBottom: "0",
           marginTop: "0",
         }}
         initial="hidden"
         animate="visible"
         variants={fadeUp}
       >
+        <motion.div
+          style={{
+            display: "inline-block",
+            padding: "10px 25px",
+            border: "2px solid rgba(255, 107, 53, 0.8)",
+            borderRadius: "30px",
+            fontSize: "0.9rem",
+            fontWeight: 600,
+            letterSpacing: "1px",
+            marginBottom: "30px",
+            color: "#ff6b35",
+            background: "rgba(0, 0, 0, 0.3)",
+          }}
+          variants={fadeUp}
+        >
+          FURNITURE COLLECTION
+        </motion.div>
+
         <motion.h1
           style={{
-            fontSize: "clamp(2.5rem, 5vw, 3.5rem)",
-            fontWeight: 800,
-            margin: "0 0 15px",
-            textShadow: "2px 2px 4px rgba(0,0,0,0.2)",
+            fontSize: "clamp(3rem, 6vw, 4.5rem)",
+            fontWeight: 900,
+            margin: "0 0 20px",
+            textShadow: "3px 3px 6px rgba(0,0,0,0.5)",
+            lineHeight: "1.2",
+            maxWidth: "800px",
           }}
           variants={fadeUp}
         >
           한샘 가구 둘러보기
         </motion.h1>
+
         <motion.p
           style={{
-            fontSize: "1.2rem",
+            fontSize: "1.3rem",
             opacity: 0.95,
-            margin: 0,
+            margin: "0",
+            maxWidth: "600px",
+            lineHeight: "1.6",
           }}
           variants={fadeUp}
         >
@@ -222,29 +252,63 @@ function ResourcesPage() {
         </motion.p>
       </motion.div>
 
-      {/* Controls Section */}
+      {/* Controls Section - Now below header */}
       <motion.div
         style={{
           maxWidth: "1200px",
-          margin: "0 auto 40px",
-          padding: "0 20px",
+          margin: "0 auto",
+          padding: "60px 20px 0",
         }}
         initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true }}
+        animate="visible"
         variants={fadeUp}
       >
-        {/* Room Category Filters (큰 카테고리) */}
-        <div style={{ marginBottom: "20px" }}>
-          <h3 style={{
-            textAlign: "center",
-            fontSize: "1.1rem",
-            fontWeight: 600,
-            color: "#495057",
-            marginBottom: "15px"
-          }}>
-            공간 선택
-          </h3>
+          {/* Search Bar */}
+          <div
+            style={{
+              maxWidth: "500px",
+              margin: "0 auto 40px",
+              position: "relative",
+            }}
+          >
+          <input
+            type="text"
+            placeholder="가구 검색..."
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "16px 20px",
+              border: "2px solid rgba(255, 255, 255, 0.2)",
+              borderRadius: "25px",
+              fontSize: "1rem",
+              boxSizing: "border-box",
+              transition: "all 0.3s ease",
+              background: "rgba(255, 255, 255, 0.05)",
+              color: "#fff",
+            }}
+            onFocus={(e) => {
+              e.target.style.borderColor = "#ff6b35";
+              e.target.style.boxShadow = "0 0 0 4px rgba(255, 107, 53, 0.1)";
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = "rgba(255, 255, 255, 0.2)";
+              e.target.style.boxShadow = "none";
+            }}
+          />
+        </div>
+
+          {/* Room Category Filters (큰 카테고리) */}
+          <div style={{ marginBottom: "20px" }}>
+            <h3 style={{
+              textAlign: "center",
+              fontSize: "1.1rem",
+              fontWeight: 600,
+              color: "rgba(255, 255, 255, 0.9)",
+              marginBottom: "15px"
+            }}>
+              공간 선택
+            </h3>
           <div
             style={{
               display: "flex",
@@ -270,17 +334,13 @@ function ResourcesPage() {
                   transition: "all 0.3s ease",
                   background:
                     activeRoomCategory === category.id
-                      ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-                      : "#fff",
-                  color: activeRoomCategory === category.id ? "#fff" : "#333",
-                  boxShadow:
-                    activeRoomCategory === category.id
-                      ? "0 8px 20px rgba(102, 126, 234, 0.3)"
-                      : "0 2px 8px rgba(0, 0, 0, 0.08)",
+                      ? "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)"
+                      : "rgba(255, 255, 255, 0.15)",
+                  color: activeRoomCategory === category.id ? "#fff" : "#999",
+                  boxShadow: "none",
                 }}
                 whileHover={{
                   scale: 1.05,
-                  boxShadow: "0 10px 25px rgba(102, 126, 234, 0.4)",
                 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -290,17 +350,17 @@ function ResourcesPage() {
           </div>
         </div>
 
-        {/* Small Category Filters (작은 카테고리) */}
-        <div style={{ marginBottom: "30px" }}>
-          <h3 style={{
-            textAlign: "center",
-            fontSize: "1.1rem",
-            fontWeight: 600,
-            color: "#495057",
-            marginBottom: "15px"
-          }}>
-            가구 종류
-          </h3>
+          {/* Small Category Filters (작은 카테고리) */}
+          <div style={{ marginBottom: "30px" }}>
+            <h3 style={{
+              textAlign: "center",
+              fontSize: "1.1rem",
+              fontWeight: 600,
+              color: "rgba(255, 255, 255, 0.9)",
+              marginBottom: "15px"
+            }}>
+              가구 종류
+            </h3>
           <div
             style={{
               display: "flex",
@@ -323,17 +383,13 @@ function ResourcesPage() {
                   transition: "all 0.3s ease",
                   background:
                     activeSmallCategory === category.id
-                      ? "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)"
-                      : "#fff",
-                  color: activeSmallCategory === category.id ? "#fff" : "#333",
-                  boxShadow:
-                    activeSmallCategory === category.id
-                      ? "0 6px 15px rgba(245, 87, 108, 0.3)"
-                      : "0 2px 8px rgba(0, 0, 0, 0.08)",
+                      ? "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)"
+                      : "rgba(255, 255, 255, 0.15)",
+                  color: activeSmallCategory === category.id ? "#fff" : "#999",
+                  boxShadow: "none",
                 }}
                 whileHover={{
                   scale: 1.05,
-                  boxShadow: "0 8px 20px rgba(245, 87, 108, 0.4)",
                 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -342,51 +398,6 @@ function ResourcesPage() {
             ))}
           </div>
         </div>
-
-        {/* Search Bar */}
-        <div
-          style={{
-            maxWidth: "500px",
-            margin: "0 auto",
-            position: "relative",
-          }}
-        >
-          <i
-            className="fas fa-search"
-            style={{
-              position: "absolute",
-              left: "20px",
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: "#999",
-              fontSize: "1.1em",
-            }}
-          ></i>
-          <input
-            type="text"
-            placeholder="가구 검색..."
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "16px 20px 16px 50px",
-              border: "2px solid #e9ecef",
-              borderRadius: "25px",
-              fontSize: "1rem",
-              boxSizing: "border-box",
-              transition: "all 0.3s ease",
-              background: "#fff",
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = "#667eea";
-              e.target.style.boxShadow = "0 0 0 4px rgba(102, 126, 234, 0.1)";
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = "#e9ecef";
-              e.target.style.boxShadow = "none";
-            }}
-          />
-        </div>
       </motion.div>
 
       {/* Furniture Grid */}
@@ -394,7 +405,7 @@ function ResourcesPage() {
         style={{
           maxWidth: "1200px",
           margin: "0 auto",
-          padding: "0 20px",
+          padding: "60px 20px 0",
         }}
       >
         {isLoading ? (
@@ -420,20 +431,25 @@ function ResourcesPage() {
                 <div
                   key={item.id}
                   style={{
-                    backgroundColor: "#fff",
+                    background: "rgba(255, 255, 255, 0.05)",
+                    backdropFilter: "blur(10px)",
+                    WebkitBackdropFilter: "blur(10px)",
                     borderRadius: "20px",
                     overflow: "hidden",
-                    boxShadow: "0 10px 30px rgba(0, 0, 0, 0.08)",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    boxShadow: "0 10px 30px rgba(0, 0, 0, 0.3)",
                     transition: "all 0.3s ease",
                     cursor: "pointer",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = "translateY(-10px)";
-                    e.currentTarget.style.boxShadow = "0 20px 40px rgba(0, 0, 0, 0.15)";
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
+                    e.currentTarget.style.boxShadow = "0 20px 40px rgba(0, 0, 0, 0.5)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "0 10px 30px rgba(0, 0, 0, 0.08)";
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+                    e.currentTarget.style.boxShadow = "0 10px 30px rgba(0, 0, 0, 0.3)";
                   }}
                 >
                   {/* Image */}
@@ -509,7 +525,7 @@ function ResourcesPage() {
                       fontSize: "1.3em",
                       fontWeight: 700,
                       margin: "0 0 12px",
-                      color: "#333",
+                      color: "#fff",
                     }}
                   >
                     {item.name}
@@ -522,14 +538,14 @@ function ResourcesPage() {
                   }}>
                     <span style={{
                       fontSize: "0.9em",
-                      color: "#6c757d",
+                      color: "rgba(255, 255, 255, 0.7)",
                     }}>
                       {item.roomName}
                     </span>
                     <span style={{
                       fontSize: "1.1em",
                       fontWeight: 700,
-                      color: "#667eea",
+                      color: "#ff6b35",
                     }}>
                       {item.price ? `₩${parseInt(item.price).toLocaleString()}` : ""}
                     </span>
@@ -588,19 +604,19 @@ function ResourcesPage() {
                 onClick={() => setCurrentPage(page)}
                 style={{
                   padding: "8px 14px",
-                  border: currentPage === page ? "2px solid #667eea" : "1px solid #dee2e6",
+                  border: "none",
                   borderRadius: "6px",
                   fontSize: "0.95rem",
                   fontWeight: currentPage === page ? 700 : 500,
                   cursor: "pointer",
-                  background: currentPage === page ? "#667eea" : "#fff",
-                  color: currentPage === page ? "#fff" : "#495057",
+                  background: "transparent",
+                  color: currentPage === page ? "#667eea" : "#aaa",
                   transition: "all 0.2s ease",
                   minWidth: "40px",
                 }}
                 whileHover={{
                   scale: 1.05,
-                  borderColor: "#667eea",
+                  color: "#667eea",
                 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -614,18 +630,17 @@ function ResourcesPage() {
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 style={{
                   padding: "8px 12px",
-                  border: "1px solid #dee2e6",
+                  border: "none",
                   borderRadius: "6px",
                   fontSize: "0.9rem",
                   cursor: "pointer",
-                  background: "#fff",
-                  color: "#667eea",
+                  background: "transparent",
+                  color: "#aaa",
                   transition: "all 0.2s ease",
                 }}
                 whileHover={{
                   scale: 1.05,
-                  borderColor: "#667eea",
-                  background: "#f8f9fa",
+                  color: "#667eea",
                 }}
                 whileTap={{ scale: 0.95 }}
               >
