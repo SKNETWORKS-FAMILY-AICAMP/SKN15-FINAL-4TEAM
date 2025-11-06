@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # React Frontend Application
+  hanssem-ui:
+    build:
+      context: ..
+      dockerfile: docker-deployment/Dockerfile
+    container_name: hanssem-interior-ui
+    ports:
+      - "8888:80"
+    environment:
+      - NODE_ENV=production
+    networks:
+      - hanssem-network
+    restart: unless-stopped
+    volumes:
+      # Mount CSV data files
+      - ../ui/public:/usr/share/nginx/html/public:ro
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  hanssem-network:
+    driver: bridge
+
+# For future backend integration
+# Uncomment and configure when adding backend services
+#
+# services:
+#   hanssem-backend:
+#     build:
+#       context: ../backend
+#       dockerfile: Dockerfile
+#     container_name: hanssem-backend
+#     ports:
+#       - "8000:8000"
+#     environment:
+#       - DATABASE_URL=postgresql://user:password@db:5432/hanssem
+#     networks:
+#       - hanssem-network
+#     depends_on:
+#       - db
+#
+#   db:
+#     image: postgres:15-alpine
+#     container_name: hanssem-db
+#     environment:
+#       - POSTGRES_USER=user
+#       - POSTGRES_PASSWORD=password
+#       - POSTGRES_DB=hanssem
+#     volumes:
+#       - postgres-data:/var/lib/postgresql/data
+#     networks:
+#       - hanssem-network
+#
+# volumes:
+#   postgres-data:

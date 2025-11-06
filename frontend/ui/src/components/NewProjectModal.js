@@ -1,0 +1,301 @@
+// ✅ NewProjectModal.js (수정 버전)
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import axios from "axios";
+import "./NewProjectModal.css";
+
+function NewProjectModal({ onClose, onCreated }) {
+  const navigate = useNavigate();
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [title, setTitle] = useState("새 프로젝트 생성");
+  const [form, setForm] = useState({
+    image: null,
+    imagePreview: null,
+    type: "",
+    space: "",
+    budget: "",
+    family: "",
+    style: "",
+    emptyRoom: false,
+  });
+  const [isLoading, setIsLoading] = useState(false);
+
+  // ✅ 입력값 변경
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setForm({ ...form, [name]: type === "checkbox" ? checked : value });
+  };
+
+  // ✅ 이미지 업로드
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setForm({
+      ...form,
+      image: file,
+      imagePreview: URL.createObjectURL(file),
+    });
+  };
+
+  const handleImageRemove = () =>
+    setForm({ ...form, image: null, imagePreview: null });
+
+  // ✅ 프로젝트 생성 요청
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    const user_id = localStorage.getItem("user_id") || "guest";
+
+    try {
+      const formData = new FormData();
+
+      // ✅ 백엔드 컬럼명에 맞게 key 변경
+      formData.append("user_id", user_id);
+      formData.append("title", title);
+      formData.append("residence_type", form.type);
+      formData.append("space_type", form.space);
+      formData.append("budget_range", form.budget);
+      formData.append("family_type", form.family);
+      formData.append("design_style", form.style);
+      if (form.image) formData.append("image", form.image);
+
+      const response = await axios.post(
+        `http://${window.location.hostname}:9000/api/projects/create/`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+          timeout: 600000, // 10분 - AI 이미지 9개 생성 대기 시간
+        }
+      );
+
+      console.log("✅ 프로젝트 생성 성공:", response.data);
+
+      // AI 이미지 생성 성공 여부 확인
+      const projectId = response.data.project_id;
+      const pipelineStatus = response.data.pipeline?.status;
+
+      if (pipelineStatus === "completed" || pipelineStatus === "partial") {
+        // AI 이미지가 생성되었으면 결과 페이지로 이동
+        alert(`프로젝트가 생성되었습니다! AI가 ${response.data.pipeline.count}개의 디자인을 생성했습니다.`);
+        navigate(`/results/${projectId}`);
+      } else if (pipelineStatus === "failed") {
+        // AI 생성 실패
+        alert(`프로젝트는 생성되었지만 AI 이미지 생성에 실패했습니다.\n이유: ${response.data.pipeline.reason}`);
+        if (onCreated) onCreated();
+        if (onClose) onClose();
+      } else {
+        // 이미지 없이 생성된 경우
+        alert("프로젝트가 생성되었습니다!");
+        if (onCreated) onCreated();
+        if (onClose) onClose();
+      }
+    } catch (error) {
+      console.error("❌ 프로젝트 생성 실패:", error.response?.data || error);
+
+      // 백엔드 서버가 없는 경우 로컬 저장소에 임시 저장
+      if (error.code === "ERR_NETWORK" || error.code === "ECONNREFUSED") {
+        console.log("⚠️ 백엔드 서버가 실행되지 않았습니다. 로컬에 임시 저장합니다.");
+
+        const project = {
+          id: Date.now(),
+          userId: user_id,
+          title,
+          type: form.type,
+          space: form.space,
+          budget: form.budget,
+          family: form.family,
+          style: form.style,
+          imagePreview: form.imagePreview,
+          createdAt: new Date().toISOString(),
+          status: "진행중"
+        };
+
+        // 로컬 스토리지에 저장
+        const existingProjects = JSON.parse(localStorage.getItem("projects") || "[]");
+        existingProjects.push(project);
+        localStorage.setItem("projects", JSON.stringify(existingProjects));
+
+        alert("백엔드 서버가 실행되지 않아 프로젝트를 임시로 로컬에 저장했습니다.\n\n백엔드 서버를 실행하려면:\npython manage.py runserver");
+
+        if (onCreated) {
+          onCreated();
+        } else if (onClose) {
+          onClose();
+        }
+      } else {
+        alert("프로젝트 생성 중 오류가 발생했습니다.\n\n" + (error.response?.data?.message || error.message));
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {/* 로딩 팝업 */}
+      {isLoading && (
+        <motion.div
+          className="loading-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.7)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 10000,
+          }}
+        >
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            style={{
+              backgroundColor: "white",
+              padding: "40px 60px",
+              borderRadius: "20px",
+              textAlign: "center",
+              boxShadow: "0 10px 40px rgba(0, 0, 0, 0.3)",
+            }}
+          >
+            <div
+              style={{
+                width: "60px",
+                height: "60px",
+                border: "5px solid #f3f3f3",
+                borderTop: "5px solid #ff6b6b",
+                borderRadius: "50%",
+                margin: "0 auto 20px",
+                animation: "spin 1s linear infinite",
+              }}
+            />
+            <h3 style={{ margin: "0 0 10px", fontSize: "24px", color: "#333" }}>
+              AI 이미지 9개 생성 중...
+            </h3>
+            <p style={{ margin: 0, color: "#666", fontSize: "16px" }}>
+              9개의 인테리어 디자인을 생성하는 중입니다.<br />
+              최대 10분 정도 소요될 수 있으니 잠시만 기다려주세요!
+            </p>
+          </motion.div>
+        </motion.div>
+      )}
+
+      <motion.div
+        className="modal-overlay"
+        onClick={onClose}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+      >
+        <motion.div
+          className="modal-content"
+          onClick={(e) => e.stopPropagation()}
+          initial={{ opacity: 0, scale: 0.9, y: 40 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 40 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+        >
+          <button className="modal-close" onClick={onClose}>✕</button>
+
+          {/* 제목 */}
+          <div className="modal-header">
+            {isEditingTitle ? (
+              <input
+                className="title-input"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onBlur={() => setIsEditingTitle(false)}
+                autoFocus
+              />
+            ) : (
+              <h2 onClick={() => setIsEditingTitle(true)}>{title} ✏️</h2>
+            )}
+          </div>
+
+          <form onSubmit={handleSubmit} className="new-project-form">
+            {/* ✅ 이미지 업로드 영역 */}
+            <div className="image-upload">
+              {form.imagePreview ? (
+                <div className="image-preview-container">
+                  <img
+                    src={form.imagePreview}
+                    alt="preview"
+                    className="uploaded-image"
+                  />
+                  <button
+                    type="button"
+                    className="image-remove"
+                    onClick={handleImageRemove}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <label htmlFor="imageUpload" className="upload-label">
+                  <i className="fas fa-cloud-upload-alt"></i> 이미지 업로드
+                  <input
+                    type="file"
+                    id="imageUpload"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    style={{ display: "none" }}
+                  />
+                </label>
+              )}
+            </div>
+
+            {/* 우측 폼 */}
+            <div className="form-right">
+              {[
+                { label: "주거유형", name: "type", placeholder: "예: 아파트" },
+                { label: "공간", name: "space", placeholder: "예: 거실" },
+                { label: "예산", name: "budget", placeholder: "예: 300만원" },
+                { label: "가족유형", name: "family", placeholder: "예: 신혼부부" },
+                { label: "스타일", name: "style", placeholder: "예: 미니멀리즘" },
+              ].map((f, i) => (
+                <div key={i} className="form-group">
+                  <label>{f.label}</label>
+                  <input
+                    name={f.name}
+                    value={form[f.name]}
+                    onChange={handleChange}
+                    placeholder={f.placeholder}
+                  />
+                </div>
+              ))}
+
+              <label className="checkbox">
+                <input
+                  type="checkbox"
+                  name="emptyRoom"
+                  checked={form.emptyRoom}
+                  onChange={handleChange}
+                />
+                빈 방인가요?
+              </label>
+
+              <motion.button
+                type="submit"
+                className="submit-btn"
+                disabled={isLoading}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                {isLoading ? "생성 중..." : "프로젝트 생성"}
+              </motion.button>
+            </div>
+          </form>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+export default NewProjectModal;

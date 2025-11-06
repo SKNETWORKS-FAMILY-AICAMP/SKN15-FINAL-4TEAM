@@ -1,0 +1,37 @@
+# Node modules
+node_modules/
+ui/node_modules/
+
+# Build outputs
+ui/build/
+dist/
+*.log
+
+# Environment variables (보안상 중요!)
+.env
+.env.local
+.env.production
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker volumes
+docker-volumes/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Test coverage
+coverage/
+
+# Claude Code
+.claude/
