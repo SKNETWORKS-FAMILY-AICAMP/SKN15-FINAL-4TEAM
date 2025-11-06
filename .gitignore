@@ -1,0 +1,54 @@
+# ==========================
+# 🔒 Environment & Secrets
+# ==========================
+.env
+*.pem
+*.ppk
+
+# ==========================
+# 🐍 Python / Django
+# ==========================
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.log
+*.pot
+*.pyc
+db.sqlite3
+media/
+staticfiles/
+
+# Django migrations cache
+*/migrations/__pycache__/
+*/migrations/*.pyc
+
+# ==========================
+# ⚙️ Node / React
+# ==========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+.env.development.local
+.env.production.local
+
+# React build 결과물 (서버에서 빌드됨)
+frontend/build/
+
+# ==========================
+# 🐳 Docker
+# ==========================
+*.tar
+*.pid
+.docker/
+docker-compose.override.yml
+docker-compose.local.yml
+
+# ==========================
+# 🧠 VSCode / System
+# ==========================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

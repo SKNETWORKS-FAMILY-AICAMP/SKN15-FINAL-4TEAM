@@ -1,0 +1,39 @@
+
+services:
+  backend:
+    build: ./backend
+    container_name: goodfellow_backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app
+    networks:
+      - goodfellow_net
+
+  frontend:
+    build: ./frontend
+    container_name: goodfellow_frontend
+    ports:
+      - "3000:80"
+    networks:
+      - goodfellow_net
+
+  nginx:
+    image: nginx:latest
+    container_name: goodfellow_nginx
+    ports:
+      - "8081:80"
+    depends_on:
+      - backend
+      - frontend
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./backend/staticfiles:/app/staticfiles
+    networks:
+      - goodfellow_net
+
+networks:
+  goodfellow_net:
+    driver: bridge

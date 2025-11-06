@@ -1,0 +1,10 @@
+.git
+.gitignore
+__pycache__
+node_modules
+*.pyc
+*.log
+*.sqlite3
+.env
+.vscode
+frontend/build
