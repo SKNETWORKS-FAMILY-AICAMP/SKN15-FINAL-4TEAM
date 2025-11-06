@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  # React 프론트엔드 (Nginx)
+  frontend:
+    image: nginx:alpine
+    container_name: hanssem-frontend
+    ports:
+      - "8080:80"
+    volumes:
+      - ./frontend-nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./frontend/ui/build:/usr/share/nginx/html:ro
+    networks:
+      - hanssem-network
+    restart: unless-stopped
+
+  # Django 백엔드
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: hanssem-backend-new
+    ports:
+      - "9090:9000"
+    env_file:
+      - ./backend/.env
+    networks:
+      - hanssem-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  hanssem-network:
+    driver: bridge
