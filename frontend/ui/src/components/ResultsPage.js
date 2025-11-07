@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { FaArrowLeft } from "react-icons/fa";
 import DesignResultsGallery from "./DesignResultsGallery";
 import ImageRefineModal from "./ImageRefineModal";
-import Footer from "./Footer";
 import { getProjectAiImages, refineProjectImage } from "../api/projectAPI";
 import "../styles/ResultsPage.css";
 
@@ -26,16 +25,10 @@ function ResultsPage() {
 
     try {
       const images = await getProjectAiImages(projectId);
-      console.log("✅ 받은 이미지 데이터:", images);
-      console.log("✅ 데이터 타입:", typeof images, Array.isArray(images));
-
-      if (!Array.isArray(images)) {
-        throw new Error(`이미지 데이터가 배열이 아닙니다. 받은 타입: ${typeof images}`);
-      }
-
       const mapped = images.map((image, index) => ({
         id: image.image_id?.toString() || `ai-${index}`,
         imageId: image.image_id,
+        sourceImageId: image.source_image_id ?? null,
         title: image.design_style || `디자인 컨셉 ${index + 1}`,
         description:
           image.residence_type ||
@@ -44,11 +37,27 @@ function ResultsPage() {
           "생성된 인테리어 디자인",
         imageUrl: image.image_url,
         isSelected: image.is_selected,
+        designStyle: image.design_style,
+        residenceType: image.residence_type,
+        spaceType: image.space_type,
+        budgetRange: image.budget_range,
+        familyType: image.family_type,
       }));
-      setConcepts(mapped);
-      const preselected = mapped
+
+      const sorted = [...mapped].sort((a, b) => {
+        const aRefined = a.sourceImageId ? 1 : 0;
+        const bRefined = b.sourceImageId ? 1 : 0;
+        if (aRefined !== bRefined) {
+          return aRefined - bRefined;
+        }
+        return (a.imageId || 0) - (b.imageId || 0);
+      });
+
+      const preselected = sorted
         .filter((item) => item.isSelected)
         .map((item) => item.id);
+
+      setConcepts(sorted);
       setSelectedIds(preselected);
     } catch (err) {
       console.error("❌ AI 이미지 로드 실패:", err);
@@ -63,6 +72,14 @@ function ResultsPage() {
   }, [fetchImages]);
 
   const galleryConcepts = useMemo(() => concepts, [concepts]);
+
+  const handleCompleteSelection = (currentSelection) => {
+    const selection = currentSelection && currentSelection.length ? currentSelection : selectedIds;
+    if (selection.length === 0) return;
+    navigate(`/results/${projectId}/summary`, {
+      state: { selectedImageIds: selection },
+    });
+  };
 
   const handleOpenRefine = (index) => {
     setRefineError(null);
@@ -100,48 +117,45 @@ function ResultsPage() {
   };
 
   return (
-    <div className="results-page">
-      <main className="results-layout">
-        <header className="results-layout__header">
-          <button
-            type="button"
-            className="results-layout__back"
-            onClick={() => navigate(-1)}
-          >
-            <FaArrowLeft /> 프로젝트 목록으로
-          </button>
-          <h1>AI 생성 디자인 결과</h1>
-          <span className="results-layout__project">Project #{projectId}</span>
-        </header>
+    <main className="results-layout">
+      <header className="results-layout__header">
+        <button
+          type="button"
+          className="results-layout__back"
+          onClick={() => navigate(-1)}
+        >
+          <FaArrowLeft /> 프로젝트 목록으로
+        </button>
+        <h1>AI 생성 디자인 결과</h1>
+        <span className="results-layout__project">Project #{projectId}</span>
+      </header>
 
-        {isLoading ? (
-          <div className="results-layout__status">AI 이미지를 불러오는 중...</div>
-        ) : error ? (
-          <div className="results-layout__status results-layout__status--error">
-            {error}
-          </div>
-        ) : (
-          <DesignResultsGallery
-            concepts={galleryConcepts}
-            defaultSelectedIds={selectedIds}
-            onSelectionChange={setSelectedIds}
-            onRequestRefine={handleOpenRefine}
-          />
-        )}
-
-        <ImageRefineModal
-          isOpen={isRefineOpen}
+      {isLoading ? (
+        <div className="results-layout__status">AI 이미지를 불러오는 중...</div>
+      ) : error ? (
+        <div className="results-layout__status results-layout__status--error">
+          {error}
+        </div>
+      ) : (
+        <DesignResultsGallery
           concepts={galleryConcepts}
-          activeIndex={refineIndex}
-          onClose={handleCloseRefine}
-          onSubmit={handleSubmitRefine}
-          isSubmitting={isRefineLoading}
-          errorMessage={refineError}
+          defaultSelectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
+          onRequestRefine={handleOpenRefine}
+          onComplete={handleCompleteSelection}
         />
-      </main>
+      )}
 
-      <Footer />
-    </div>
+      <ImageRefineModal
+        isOpen={isRefineOpen}
+        concepts={galleryConcepts}
+        activeIndex={refineIndex}
+        onClose={handleCloseRefine}
+        onSubmit={handleSubmitRefine}
+        isSubmitting={isRefineLoading}
+        errorMessage={refineError}
+      />
+    </main>
   );
 }
 

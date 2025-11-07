@@ -1,25 +1,34 @@
-import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import ProjectStats from "./ProjectStats";
+import ProjectCards from "./ProjectCards";
+import ProjectTable from "./ProjectTable";
 import NewProjectModal from "./NewProjectModal";
-import Footer from "./Footer";
+import { getProjects, getStats } from "../api/projectAPI";
+import { normalizeStatus } from "../utils/statusStyles";
 import "../App.css";
 
+const DEFAULT_STATS = {
+  total_projects: 0,
+  in_progress: 0,
+  completed: 0,
+  recent_increase: 0,
+  total_designs: 0,
+};
+
 function Dashboard() {
-  const navigate = useNavigate();
-  const [showModal, setShowModal] = useState(false);
   const [projects, setProjects] = useState([]);
-  const [statusFilter, setStatusFilter] = useState("all"); // "all", "진행중", "완료"
-  const [stats, setStats] = useState({
-    total: 0,
-    inProgress: 0,
-    completed: 0,
-    designs: 0
-  });
-  // Animation variants
+  const [stats, setStats] = useState(DEFAULT_STATS);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const userId =
+    typeof window !== "undefined" ? localStorage.getItem("user_id") : null;
+
   const fadeUp = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
+    hidden: { opacity: 0, y: 40 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
   };
 
   const staggerContainer = {
@@ -27,199 +36,185 @@ function Dashboard() {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.05,
+        staggerChildren: 0.1,
       },
     },
   };
 
-  // 프로젝트 로드
-  useEffect(() => {
-    loadProjects();
-  }, []);
-
-  const loadProjects = async () => {
-    const userId = localStorage.getItem("user_id") || "guest";
+  const loadFallbackProjects = useCallback(() => {
+    const stored = localStorage.getItem("projects");
+    if (!stored) {
+      setProjects([]);
+      return;
+    }
 
     try {
-      // 백엔드에서 프로젝트 데이터 가져오기
-      const response = await fetch(`http://${window.location.hostname}:9000/api/projects/${userId}/`);
+      const parsed = JSON.parse(stored);
+      if (!Array.isArray(parsed)) {
+        setProjects([]);
+        return;
+      }
 
-      if (response.ok) {
-        const backendProjects = await response.json();
-
-        // 백엔드 데이터를 프론트엔드 형식으로 변환
-        const userProjects = backendProjects.map(p => ({
-          id: p.id,
-          userId: userId,
-          title: p.title,
-          status: p.status === "progress" ? "진행중" : p.status === "completed" ? "완료" : "대기",
-          imagePreview: p.project_image,
-          createdAt: p.created_at,
-          type: p.residence_type || "-",
-          space: p.space_type || "-",
-          budget: p.budget_range || "-",
-          family: p.family_type || "-",
-          style: p.design_style || "-",
-          aiImageCount: p.ai_image_count || 0 // 실제 AI 이미지 개수
+      const userProjects = parsed
+        .filter((item) => item.userId === userId || item.user_id === userId)
+        .map((project) => ({
+          ...project,
+          id: project.id,
+          status: normalizeStatus(project.status),
+          project_image:
+            project.project_image || project.imagePreview || project.image || "",
+          created_at:
+            project.created_at || project.createdAt || project.created_at || null,
+          updated_at:
+            project.updated_at || project.updatedAt || project.updated_at || null,
+          residence_type:
+            project.residence_type || project.type || project.residenceType || "",
+          space_type:
+            project.space_type || project.space || project.spaceType || "",
+          budget_range:
+            project.budget_range || project.budget || project.budgetRange || "",
+          family_type:
+            project.family_type || project.family || project.familyType || "",
+          design_style:
+            project.design_style || project.style || project.designStyle || "",
+          ai_image_count:
+            project.ai_image_count ||
+            project.aiImageCount ||
+            project.aiImage_count ||
+            0,
         }));
 
-        setProjects(userProjects);
-
-        // 통계 계산
-        const inProgress = userProjects.filter(p => p.status === "진행중").length;
-        const completed = userProjects.filter(p => p.status === "완료").length;
-        const totalDesigns = userProjects.reduce((sum, p) => sum + (p.aiImageCount || 0), 0);
-
-        setStats({
-          total: userProjects.length,
-          inProgress: inProgress,
-          completed: completed,
-          designs: totalDesigns // 실제 생성된 AI 이미지 개수
-        });
-      } else {
-        console.warn("백엔드에서 프로젝트를 불러올 수 없습니다. localStorage 사용");
-        // 백엔드 실패 시 localStorage 사용
-        loadProjectsFromLocalStorage(userId);
-      }
+      setProjects(userProjects);
+      setStats({
+        total_projects: userProjects.length,
+        in_progress: userProjects.filter((project) => project.status === "progress")
+          .length,
+        completed: userProjects.filter((project) => project.status === "completed")
+          .length,
+        recent_increase: 0,
+        total_designs: userProjects.reduce(
+          (sum, project) =>
+            sum +
+            (project.ai_image_count ??
+              project.aiImageCount ??
+              project.ai_imageCount ??
+              0),
+          0
+        ),
+      });
     } catch (error) {
-      console.error("프로젝트 로드 중 오류:", error);
-      // 네트워크 오류 시 localStorage 사용
-      loadProjectsFromLocalStorage(userId);
+      console.error("❌ 로컬 프로젝트 파싱 실패:", error);
+      setProjects([]);
+    }
+  }, [userId]);
+
+  const fetchData = useCallback(async () => {
+    if (!userId) {
+      setProjects([]);
+      setStats(DEFAULT_STATS);
+      return;
+    }
+
+    try {
+      const [projectResponse, statsResponse] = await Promise.all([
+        getProjects(userId),
+        getStats(userId),
+      ]);
+
+      const normalizedProjects = Array.isArray(projectResponse)
+        ? projectResponse.map((project) => ({
+            ...project,
+            status: normalizeStatus(project.status),
+            project_image:
+              project.project_image || project.imagePreview || project.image || "",
+            created_at:
+              project.created_at || project.createdAt || project.created_at || null,
+            updated_at:
+              project.updated_at || project.updatedAt || project.updated_at || null,
+            residence_type: project.residence_type || "",
+            space_type: project.space_type || "",
+            budget_range: project.budget_range || "",
+            family_type: project.family_type || "",
+            design_style: project.design_style || "",
+          }))
+        : [];
+
+      setProjects(normalizedProjects);
+      const computedDesigns = normalizedProjects.reduce(
+        (sum, project) => sum + (project.ai_image_count || 0),
+        0
+      );
+      const mergedStats = {
+        ...DEFAULT_STATS,
+        ...(statsResponse || {}),
+      };
+      if (
+        mergedStats.total_designs === undefined ||
+        mergedStats.total_designs === null
+      ) {
+        mergedStats.total_designs = computedDesigns;
+      }
+      setStats(mergedStats);
+    } catch (error) {
+      console.error("❌ 대시보드 데이터 로드 실패:", error);
+      loadFallbackProjects();
+    }
+  }, [userId, loadFallbackProjects]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleProjectCreated = (result) => {
+    setIsModalOpen(false);
+    fetchData();
+    if (result?.project_id) {
+      navigate(`/results/${result.project_id}`);
     }
   };
 
-  // localStorage에서 프로젝트 로드 (폴백)
-  const loadProjectsFromLocalStorage = (userId) => {
-    const allProjects = JSON.parse(localStorage.getItem("projects") || "[]");
-    const userProjects = allProjects.filter(p => p.userId === userId);
-    setProjects(userProjects);
-
-    const inProgress = userProjects.filter(p => p.status === "진행중").length;
-    const completed = userProjects.filter(p => p.status === "완료").length;
-
-    setStats({
-      total: userProjects.length,
-      inProgress: inProgress,
-      completed: completed,
-      designs: userProjects.length * 10
-    });
+  const handleStatusUpdated = (projectId, newStatus) => {
+    setProjects((prev) =>
+      prev.map((project) =>
+        project.id === projectId
+          ? { ...project, status: normalizeStatus(newStatus) }
+          : project
+      )
+    );
+    fetchData();
   };
 
-  // 통계 데이터
-  const statsData = [
-    {
-      title: "총 프로젝트",
-      value: stats.total,
-      change: `${stats.total}개 프로젝트`,
-      emoji: "📁",
-      gradient: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
-      filter: "all",
-    },
-    {
-      title: "진행 중인 프로젝트",
-      value: stats.inProgress,
-      change: `${stats.inProgress}개 진행중`,
-      emoji: "⚡",
-      gradient: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
-      filter: "진행중",
-    },
-    {
-      title: "완료된 프로젝트",
-      value: stats.completed,
-      change: `${stats.completed}개 완료`,
-      emoji: "✅",
-      gradient: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
-      filter: "완료",
-    },
-    {
-      title: "생성된 시안",
-      value: stats.designs,
-      change: `총 ${stats.designs}개`,
-      emoji: "🖼️",
-      gradient: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
-      filter: null, // 시안은 필터링 불가
-    },
-  ];
+  const progressProjects = useMemo(
+    () =>
+      projects.filter((project) => {
+        const status = normalizeStatus(project.status);
+        return status === "progress";
+      }),
+    [projects]
+  );
 
-  // 상태 필터 적용
-  const filteredProjects = statusFilter === "all"
-    ? projects
-    : projects.filter(p => p.status === statusFilter);
-
-  // 진행중인 프로젝트만 필터링 (상태 필터 적용)
-  const ongoingProjects = filteredProjects
-    .filter(p => p.status === "진행중")
-    .map(p => ({
-      id: p.id,
-      title: p.title,
-      image: p.imagePreview || "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=500",
-      status: p.status,
-      progress: Math.floor(Math.random() * 40) + 40, // 임시 진행률
-      type: p.type,
-      space: p.space,
-    }));
-
-  // 최근 프로젝트 (최신 순으로 정렬, 상태 필터 적용)
-  const recentProjects = filteredProjects
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, 5)
-    .map(p => ({
-      id: p.id,
-      name: p.title,
-      client: p.family || "-",
-      status: p.status,
-      update: new Date(p.createdAt).toLocaleDateString('ko-KR', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      }).replace(/\. /g, '.').replace('.', '.'),
-      manager: "이수현",
-      type: p.type,
-      space: p.space,
-    }));
-
-  const getStatusColor = (status) => {
-    if (status === "진행중") return "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)";
-    if (status === "초기 상담 중") return "linear-gradient(135deg, #9ca3af 0%, #b8bfc9 100%)";
-    if (status === "완료") return "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
-    return "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)";
-  };
-
-  const getStatusTextColor = (status) => {
-    return "#fff";
-  };
+  const hasProjects = projects.length > 0;
 
   return (
     <main
+      className="dashboard-page"
       style={{
         minHeight: "100vh",
         background: "#0a0a0a",
-        paddingTop: "0",
-        marginTop: "0",
       }}
     >
-      {/* Header Section */}
-      <motion.div
+      {/* Hero */}
+      <motion.section
+        className="page-hero"
         style={{
-          position: "relative",
-          height: "70vh",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "flex-start",
-          padding: "0 80px",
-          background: "linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?q=80&w=2000&auto=format&fit=crop') center/cover no-repeat",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          color: "#fff",
-          marginBottom: "50px",
-          marginTop: "0",
+          background:
+            "linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)), url('https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?q=80&w=2000&auto=format&fit=crop') center/cover no-repeat",
         }}
         initial="hidden"
         animate="visible"
         variants={fadeUp}
       >
-        <motion.div
+        <motion.span
           style={{
             display: "inline-block",
             padding: "10px 25px",
@@ -227,24 +222,23 @@ function Dashboard() {
             borderRadius: "30px",
             fontSize: "0.9rem",
             fontWeight: 600,
-            letterSpacing: "1px",
+            letterSpacing: "0.14em",
             marginBottom: "30px",
             color: "#ff6b35",
-            background: "rgba(0, 0, 0, 0.3)",
+            background: "rgba(0, 0, 0, 0.35)",
           }}
           variants={fadeUp}
         >
           PROJECT DASHBOARD
-        </motion.div>
+        </motion.span>
 
         <motion.h1
           style={{
             fontSize: "clamp(3rem, 6vw, 4.5rem)",
             fontWeight: 900,
             margin: "0 0 20px",
+            lineHeight: 1.2,
             textShadow: "3px 3px 6px rgba(0,0,0,0.5)",
-            lineHeight: "1.2",
-            maxWidth: "800px",
           }}
           variants={fadeUp}
         >
@@ -253,444 +247,185 @@ function Dashboard() {
 
         <motion.p
           style={{
-            fontSize: "1.3rem",
-            opacity: 0.95,
+            fontSize: "1.25rem",
+            opacity: 0.9,
             margin: 0,
-            maxWidth: "600px",
-            lineHeight: "1.6",
+            maxWidth: "560px",
+            lineHeight: 1.6,
           }}
           variants={fadeUp}
         >
-          진행중인 프로젝트와 현황을 한눈에 확인하세요
+          진행 중인 프로젝트와 현황을 한눈에 확인하고, 새로운 프로젝트를 바로 생성해
+          보세요.
         </motion.p>
-      </motion.div>
 
-      {/* Main Content */}
+        <motion.button
+          type="button"
+          onClick={() => setIsModalOpen(true)}
+          style={{
+            marginTop: "35px",
+            padding: "16px 40px",
+            background: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
+            color: "#fff",
+            border: "none",
+            borderRadius: "15px",
+            fontSize: "1.05rem",
+            fontWeight: 700,
+            cursor: "pointer",
+            boxShadow: "0 15px 30px rgba(255, 107, 53, 0.35)",
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+          }}
+          whileHover={{ scale: 1.02, boxShadow: "0 22px 40px rgba(255, 107, 53, 0.45)" }}
+          whileTap={{ scale: 0.96 }}
+        >
+          <i className="fas fa-plus" /> 새 프로젝트 생성
+        </motion.button>
+      </motion.section>
+
       <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "0 30px 60px" }}>
-        {/* Stats Section */}
         <motion.section
-          style={{ marginBottom: "50px" }}
+          style={{ marginBottom: "60px" }}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          variants={staggerContainer}
+          variants={fadeUp}
         >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-              gap: "25px",
-            }}
-          >
-            {statsData.map((stat, index) => (
-              <motion.div
-                key={index}
-                onClick={() => {
-                  if (stat.filter !== null) {
-                    setStatusFilter(stat.filter);
-                  }
-                }}
-                style={{
-                  background: statusFilter === stat.filter
-                    ? "rgba(255, 107, 53, 0.15)"
-                    : "rgba(255, 255, 255, 0.05)",
-                  backdropFilter: "blur(10px)",
-                  WebkitBackdropFilter: "blur(10px)",
-                  padding: "30px",
-                  borderRadius: "20px",
-                  boxShadow: "0 10px 30px rgba(0, 0, 0, 0.3)",
-                  position: "relative",
-                  overflow: "hidden",
-                  border: statusFilter === stat.filter
-                    ? "2px solid rgba(255, 107, 53, 0.6)"
-                    : "1px solid rgba(255, 255, 255, 0.1)",
-                  cursor: stat.filter !== null ? "pointer" : "default",
-                }}
-                variants={fadeUp}
-                whileHover={{
-                  y: stat.filter !== null ? -5 : 0,
-                  boxShadow: "0 15px 40px rgba(0, 0, 0, 0.5)",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div>
-                    <h3 style={{ fontSize: "0.95rem", color: "rgba(255, 255, 255, 0.7)", margin: "0 0 12px", fontWeight: 500 }}>
-                      {stat.title}
-                    </h3>
-                    <p style={{ fontSize: "2.5rem", fontWeight: 800, color: "#fff", margin: "0 0 8px" }}>
-                      {stat.value}
-                    </p>
-                    <span style={{ fontSize: "0.85rem", color: "#ff6b35", fontWeight: 600 }}>
-                      {stat.change}
-                    </span>
-                  </div>
-                  <motion.div
-                    style={{
-                      width: "60px",
-                      height: "60px",
-                      borderRadius: "15px",
-                      background: "transparent",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "2.5em",
-                    }}
-                    whileHover={{ rotate: 360 }}
-                    transition={{ duration: 0.6 }}
-                  >
-                    {stat.emoji}
-                  </motion.div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* New Project Button */}
-          <motion.button
-            onClick={() => setShowModal(true)}
-            style={{
-              marginTop: "25px",
-              padding: "16px 40px",
-              background: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
-              color: "#fff",
-              border: "none",
-              borderRadius: "15px",
-              fontSize: "1.1rem",
-              fontWeight: 700,
-              cursor: "pointer",
-              boxShadow: "0 10px 25px rgba(255, 107, 53, 0.3)",
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-            }}
-            whileHover={{ scale: 1.02, boxShadow: "0 15px 35px rgba(255, 107, 53, 0.4)" }}
-            whileTap={{ scale: 0.98 }}
-            variants={fadeUp}
-          >
-            <i className="fas fa-plus"></i>
-            새 프로젝트 생성
-          </motion.button>
+          <ProjectStats stats={stats} onNewProject={() => setIsModalOpen(true)} />
         </motion.section>
 
-        {/* Empty State or Project Lists */}
-        {projects.length === 0 ? (
+        {hasProjects ? (
+          <>
+            <motion.section
+              style={{ marginBottom: "60px" }}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={staggerContainer}
+            >
+              <motion.div variants={fadeUp}>
+                <h2
+                  style={{
+                    fontSize: "2rem",
+                    fontWeight: 700,
+                    margin: "0 0 20px",
+                    color: "#fff",
+                  }}
+                >
+                  현재 진행중인 프로젝트
+                </h2>
+                <p style={{ color: "rgba(255, 255, 255, 0.6)", marginBottom: "25px" }}>
+                  카드당 4개씩 확인하고, 이전/다음 버튼으로 다른 프로젝트도
+                  살펴보세요.
+                </p>
+              </motion.div>
+              {progressProjects.length > 0 ? (
+                <ProjectCards projects={progressProjects} />
+              ) : (
+                <motion.div
+                  style={{
+                    background: "rgba(255, 255, 255, 0.05)",
+                    borderRadius: "20px",
+                    padding: "40px",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    textAlign: "center",
+                    color: "rgba(255, 255, 255, 0.7)",
+                  }}
+                  variants={fadeUp}
+                >
+                  진행 중인 프로젝트가 아직 없습니다. 프로젝트 상태를 &quot;진행
+                  중&quot;으로 업데이트하면 여기에서 확인할 수 있어요.
+                </motion.div>
+              )}
+            </motion.section>
+
+            <motion.section
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeUp}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: "20px",
+                  color: "#fff",
+                }}
+              >
+                <div>
+                  <h2 style={{ fontSize: "2rem", fontWeight: 700, margin: 0 }}>
+                    마이 프로젝트
+                  </h2>
+                  <p style={{ color: "rgba(255, 255, 255, 0.6)", marginTop: "10px" }}>
+                    최근 프로젝트를 5개씩 확인하고 상태를 바로 변경할 수 있습니다.
+                  </p>
+                </div>
+              </div>
+              <ProjectTable projects={projects} onStatusChange={handleStatusUpdated} />
+            </motion.section>
+          </>
+        ) : (
           <motion.section
             style={{
               textAlign: "center",
               padding: "80px 20px",
               background: "rgba(255, 255, 255, 0.05)",
-              backdropFilter: "blur(10px)",
               borderRadius: "20px",
-              border: "1px solid rgba(255, 255, 255, 0.1)",
-              marginBottom: "50px",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
             }}
             initial="hidden"
             animate="visible"
             variants={fadeUp}
           >
             <motion.div
-              style={{
-                fontSize: "4em",
-                marginBottom: "20px",
-              }}
+              style={{ fontSize: "4em", marginBottom: "20px" }}
               animate={{ rotate: [0, 10, -10, 0] }}
               transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
             >
               📁
             </motion.div>
-            <h2 style={{ fontSize: "2rem", fontWeight: 700, marginBottom: "15px", color: "#fff" }}>
+            <h3 style={{ fontSize: "2rem", fontWeight: 700, color: "#fff", marginBottom: 15 }}>
               아직 프로젝트가 없습니다
-            </h2>
-            <p style={{ fontSize: "1.1rem", color: "rgba(255, 255, 255, 0.7)", marginBottom: "30px" }}>
+            </h3>
+            <p style={{ color: "rgba(255, 255, 255, 0.65)", fontSize: "1.1rem" }}>
               새 프로젝트를 생성하여 인테리어 디자인을 시작해보세요!
             </p>
             <motion.button
-              onClick={() => setShowModal(true)}
+              type="button"
+              onClick={() => setIsModalOpen(true)}
               style={{
+                marginTop: "25px",
                 padding: "16px 40px",
                 background: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
                 color: "#fff",
                 border: "none",
                 borderRadius: "15px",
-                fontSize: "1.1rem",
+                fontSize: "1.05rem",
                 fontWeight: 700,
                 cursor: "pointer",
-                boxShadow: "0 10px 25px rgba(255, 107, 53, 0.3)",
+                boxShadow: "0 15px 30px rgba(255, 107, 53, 0.35)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "12px",
               }}
-              whileHover={{ scale: 1.05, boxShadow: "0 15px 35px rgba(255, 107, 53, 0.4)" }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ scale: 1.05, boxShadow: "0 22px 42px rgba(255, 107, 53, 0.45)" }}
+              whileTap={{ scale: 0.96 }}
             >
-              <i className="fas fa-plus"></i> 첫 프로젝트 만들기
+              <i className="fas fa-plus" /> 첫 프로젝트 만들기
             </motion.button>
           </motion.section>
-        ) : (
-          <>
-            {/* Ongoing Projects Section */}
-            {ongoingProjects.length > 0 && (
-              <motion.section
-                style={{ marginBottom: "50px" }}
-                initial="hidden"
-                animate="visible"
-                variants={staggerContainer}
-              >
-                <h2 style={{ fontSize: "2rem", fontWeight: 700, marginBottom: "30px", color: "#fff" }}>
-                  현재 진행중인 인테리어 가상
-                </h2>
-
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-                    gap: "30px",
-                  }}
-                >
-                  {ongoingProjects.map((project, index) => (
-                    <motion.div
-                      key={index}
-                      onClick={() => navigate(`/results/${project.id}`)}
-                      style={{
-                        background: "rgba(255, 255, 255, 0.05)",
-                        backdropFilter: "blur(10px)",
-                        WebkitBackdropFilter: "blur(10px)",
-                        borderRadius: "20px",
-                        overflow: "hidden",
-                        boxShadow: "0 10px 30px rgba(0, 0, 0, 0.3)",
-                        cursor: "pointer",
-                        border: "1px solid rgba(255, 255, 255, 0.1)",
-                      }}
-                      variants={fadeUp}
-                      whileHover={{
-                        y: -10,
-                        boxShadow: "0 20px 40px rgba(0, 0, 0, 0.5)",
-                      }}
-                    >
-                      {/* Image */}
-                      <div style={{ position: "relative", overflow: "hidden", height: "280px" }}>
-                        <img
-                          src={project.image}
-                          alt={project.title}
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "contain",
-                            backgroundColor: "rgba(0, 0, 0, 0.3)",
-                            transition: "transform 0.3s ease",
-                          }}
-                          onMouseEnter={(e) => {
-                            e.target.style.transform = "scale(1.1)";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.target.style.transform = "scale(1)";
-                          }}
-                          onError={(e) => {
-                            e.target.src = "https://via.placeholder.com/500x300?text=No+Image";
-                          }}
-                        />
-                        {/* Status Badge */}
-                        <div
-                          style={{
-                            position: "absolute",
-                            top: "15px",
-                            right: "15px",
-                            padding: "8px 16px",
-                            background: "rgba(255, 107, 53, 0.95)",
-                            backdropFilter: "blur(10px)",
-                            borderRadius: "12px",
-                            color: "#fff",
-                            fontSize: "0.85rem",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {project.status}
-                        </div>
-                      </div>
-
-                      {/* Info */}
-                      <div style={{ padding: "25px" }}>
-                        <h3 style={{ fontSize: "1.3rem", fontWeight: 700, margin: "0 0 15px", color: "#fff" }}>
-                          {project.title}
-                        </h3>
-
-                        {/* Progress Bar */}
-                        <div>
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              marginBottom: "8px",
-                            }}
-                          >
-                            <span style={{ fontSize: "0.9rem", color: "rgba(255, 255, 255, 0.7)", fontWeight: 500 }}>진행률</span>
-                            <span style={{ fontSize: "0.9rem", color: "#ff6b35", fontWeight: 700 }}>
-                              {project.progress}%
-                            </span>
-                          </div>
-                          <div
-                            style={{
-                              width: "100%",
-                              height: "8px",
-                              background: "rgba(255, 255, 255, 0.1)",
-                              borderRadius: "10px",
-                              overflow: "hidden",
-                            }}
-                          >
-                            <motion.div
-                              style={{
-                                height: "100%",
-                                background: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
-                                borderRadius: "10px",
-                              }}
-                              initial={{ width: 0 }}
-                              animate={{ width: `${project.progress}%` }}
-                              transition={{ duration: 1, delay: 0.3 }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.section>
-            )}
-
-            {/* Recent Projects Table */}
-            <motion.section
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, amount: 0.2 }}
-              variants={fadeUp}
-            >
-              <h2 style={{ fontSize: "2rem", fontWeight: 700, marginBottom: "30px", color: "#fff" }}>
-                최근 프로젝트
-              </h2>
-
-              <div
-                style={{
-                  background: "rgba(255, 255, 255, 0.05)",
-                  backdropFilter: "blur(10px)",
-                  WebkitBackdropFilter: "blur(10px)",
-                  borderRadius: "20px",
-                  padding: "30px",
-                  boxShadow: "0 10px 30px rgba(0, 0, 0, 0.3)",
-                  overflowX: "auto",
-                  border: "1px solid rgba(255, 255, 255, 0.1)",
-                }}
-              >
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr style={{ borderBottom: "2px solid rgba(255, 255, 255, 0.1)" }}>
-                      <th style={{ padding: "15px", textAlign: "left", color: "rgba(255, 255, 255, 0.7)", fontWeight: 600, fontSize: "0.95rem" }}>
-                        프로젝트명
-                      </th>
-                      <th style={{ padding: "15px", textAlign: "left", color: "rgba(255, 255, 255, 0.7)", fontWeight: 600, fontSize: "0.95rem" }}>
-                        클라이언트
-                      </th>
-                      <th style={{ padding: "15px", textAlign: "left", color: "rgba(255, 255, 255, 0.7)", fontWeight: 600, fontSize: "0.95rem" }}>
-                        상태
-                      </th>
-                      <th style={{ padding: "15px", textAlign: "left", color: "rgba(255, 255, 255, 0.7)", fontWeight: 600, fontSize: "0.95rem" }}>
-                        최근 업데이트
-                      </th>
-                      <th style={{ padding: "15px", textAlign: "left", color: "rgba(255, 255, 255, 0.7)", fontWeight: 600, fontSize: "0.95rem" }}>
-                        담당자
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentProjects.map((project, index) => (
-                      <motion.tr
-                        key={index}
-                        onClick={() => navigate(`/results/${project.id}`)}
-                        style={{
-                          borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
-                          cursor: "pointer",
-                        }}
-                        whileHover={{ backgroundColor: "rgba(255, 255, 255, 0.05)" }}
-                      >
-                        <td style={{ padding: "20px 15px", fontSize: "1rem", fontWeight: 600, color: "#fff" }}>
-                          {project.name}
-                        </td>
-                        <td style={{ padding: "20px 15px", fontSize: "0.95rem", color: "rgba(255, 255, 255, 0.7)" }}>
-                          {project.client}
-                        </td>
-                        <td style={{ padding: "20px 15px" }} onClick={(e) => e.stopPropagation()}>
-                          <select
-                            value={project.status}
-                            onChange={async (e) => {
-                              e.stopPropagation();
-                              const newStatus = e.target.value;
-                              try {
-                                const statusMap = {
-                                  "진행중": "progress",
-                                  "완료": "completed",
-                                  "대기": "pending"
-                                };
-                                const userId = localStorage.getItem("user_id");
-                                const response = await fetch(`http://${window.location.hostname}:9000/api/projects/${project.id}/status/`, {
-                                  method: 'PATCH',
-                                  headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-User-ID': userId || ''
-                                  },
-                                  body: JSON.stringify({ status: statusMap[newStatus] })
-                                });
-
-                                if (!response.ok) {
-                                  throw new Error('상태 변경 실패');
-                                }
-
-                                await loadProjects(); // 프로젝트 목록 새로고침
-                              } catch (error) {
-                                console.error('상태 변경 실패:', error);
-                                alert('상태 변경에 실패했습니다.');
-                              }
-                            }}
-                            style={{
-                              padding: "6px 14px",
-                              borderRadius: "12px",
-                              fontSize: "0.85rem",
-                              fontWeight: 600,
-                              color: "#fff",
-                              background: getStatusColor(project.status),
-                              border: "1px solid rgba(255, 255, 255, 0.2)",
-                              cursor: "pointer",
-                              outline: "none",
-                            }}
-                          >
-                            <option value="진행중" style={{ background: "#1a1a1a", color: "#fff" }}>진행중</option>
-                            <option value="완료" style={{ background: "#1a1a1a", color: "#fff" }}>완료</option>
-                            <option value="대기" style={{ background: "#1a1a1a", color: "#fff" }}>대기</option>
-                          </select>
-                        </td>
-                        <td style={{ padding: "20px 15px", fontSize: "0.95rem", color: "rgba(255, 255, 255, 0.7)" }}>
-                          {project.update}
-                        </td>
-                        <td style={{ padding: "20px 15px", fontSize: "0.95rem", color: "rgba(255, 255, 255, 0.7)" }}>
-                          {project.manager}
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </motion.section>
-          </>
         )}
       </div>
 
-      {/* New Project Modal */}
-      {showModal && (
+      {isModalOpen && (
         <NewProjectModal
-          onClose={() => setShowModal(false)}
-          onCreated={() => {
-            setShowModal(false);
-            loadProjects(); // 프로젝트 목록 새로고침
-          }}
+          onClose={() => setIsModalOpen(false)}
+          onCreated={handleProjectCreated}
         />
       )}
-
-      {/* Footer */}
-      <Footer />
     </main>
   );
 }

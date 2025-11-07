@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Papa from "papaparse";
-import Footer from "./Footer";
 import "../App.css";
 
 function ResourcesPage() {
@@ -19,16 +18,6 @@ function ResourcesPage() {
   const fadeUp = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
-  };
-
-  const staggerContainer = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.05,
-      },
-    },
   };
 
   // CSV 파일에서 데이터 로드
@@ -56,7 +45,7 @@ function ResourcesPage() {
 
             // room_name으로 카테고리 추출
             const uniqueRooms = [...new Set(data.map((item) => item.roomName))].filter(Boolean);
-            setRoomCategories([{ id: "all", label: "All" }, ...uniqueRooms.map((room) => ({ id: room, label: room }))]);
+            setRoomCategories([{ id: "all", label: "전체" }, ...uniqueRooms.map((room) => ({ id: room, label: room }))]);
 
             // small_cat_name으로 서브 카테고리 추출
             const uniqueSmallCats = [...new Set(data.map((item) => item.smallCatName))].filter(Boolean);
@@ -72,15 +61,15 @@ function ResourcesPage() {
               return words.length > 1;
             });
 
-            // 카테고리 구성: All + 단일 단어 + Set
+            // 카테고리 구성: 전체 + 단일 단어 + 세트
             const categories = [
-              { id: "all", label: "All" },
+              { id: "all", label: "전체" },
               ...singleWordCats.map((cat) => ({ id: cat, label: cat })),
             ];
 
-            // 복합 단어 카테고리가 있으면 "Set" 추가
+            // 복합 단어 카테고리가 있으면 "세트" 추가
             if (multiWordCats.length > 0) {
-              categories.push({ id: "set", label: "Set" });
+              categories.push({ id: "set", label: "세트" });
             }
 
             setSmallCategories(categories);
@@ -188,20 +177,10 @@ function ResourcesPage() {
     >
       {/* Header Section */}
       <motion.div
+        className="page-hero"
         style={{
-          position: "relative",
-          height: "100vh",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "flex-start",
-          padding: "0 80px",
-          background: "linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=2000&auto=format&fit=crop') center/cover no-repeat",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          color: "#fff",
-          marginBottom: "0",
-          marginTop: "0",
+          background:
+            "linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=2000&auto=format&fit=crop') center/cover no-repeat",
         }}
         initial="hidden"
         animate="visible"
@@ -236,7 +215,7 @@ function ResourcesPage() {
           }}
           variants={fadeUp}
         >
-          Furniture Collection
+          한샘 가구 둘러보기
         </motion.h1>
 
         <motion.p
@@ -274,7 +253,7 @@ function ResourcesPage() {
           >
           <input
             type="text"
-            placeholder="Search furniture..."
+            placeholder="가구 검색..."
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             style={{
@@ -299,7 +278,7 @@ function ResourcesPage() {
           />
         </div>
 
-          {/* Room Category Filters */}
+          {/* Room Category Filters (큰 카테고리) */}
           <div style={{ marginBottom: "20px" }}>
             <h3 style={{
               textAlign: "center",
@@ -308,7 +287,7 @@ function ResourcesPage() {
               color: "rgba(255, 255, 255, 0.9)",
               marginBottom: "15px"
             }}>
-              Select Space
+              공간 선택
             </h3>
           <div
             style={{
@@ -351,7 +330,7 @@ function ResourcesPage() {
           </div>
         </div>
 
-          {/* Small Category Filters */}
+          {/* Small Category Filters (작은 카테고리) */}
           <div style={{ marginBottom: "30px" }}>
             <h3 style={{
               textAlign: "center",
@@ -360,7 +339,7 @@ function ResourcesPage() {
               color: "rgba(255, 255, 255, 0.9)",
               marginBottom: "15px"
             }}>
-              Furniture Type
+              가구 종류
             </h3>
           <div
             style={{
@@ -417,7 +396,7 @@ function ResourcesPage() {
             fontSize: "1.2rem"
           }}>
             <i className="fas fa-spinner fa-spin" style={{ fontSize: "3rem", marginBottom: "20px", display: "block" }}></i>
-            Loading furniture data...
+            가구 데이터를 불러오는 중...
           </div>
         ) : (
           <div
@@ -498,7 +477,7 @@ function ResourcesPage() {
                         fontSize: "1rem",
                       }}
                     >
-                      No Image
+                      이미지 없음
                     </div>
                   {/* Category Badge */}
                   <div
@@ -572,10 +551,10 @@ function ResourcesPage() {
                 }}
               ></i>
               <h3 style={{ fontSize: "1.5em", color: "#6c757d", margin: 0 }}>
-                No results found
+                검색 결과가 없습니다
               </h3>
               <p style={{ color: "#adb5bd", marginTop: "10px" }}>
-                Try different keywords or categories
+                다른 검색어나 카테고리를 선택해보세요
               </p>
             </div>
           )}
@@ -645,15 +624,13 @@ function ResourcesPage() {
                 }}
                 whileTap={{ scale: 0.95 }}
               >
-                Next <i className="fas fa-chevron-right"></i>
+                다음 <i className="fas fa-chevron-right"></i>
               </motion.button>
             )}
           </div>
         </motion.div>
       )}
 
-      {/* Footer */}
-      <Footer />
     </main>
   );
 }

@@ -22,28 +22,18 @@ function LoginPage() {
     exit: { opacity: 0, scale: 0.8, transition: { duration: 0.2 } },
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     const username = e.target.username.value;
     const password = e.target.password.value;
 
-    const result = login(username, password);
+    const result = await login(username, password);
 
     if (result.success) {
-      alert("로그인 성공!");
+      alert(`${result.user?.name || username}님 환영합니다!`);
       navigate("/projects");
     } else {
-      if (result.error === "userNotFound") {
-        alert("존재하지 않는 아이디입니다.\n회원가입을 먼저 진행해주세요.");
-      } else if (result.error === "wrongPassword") {
-        alert("비밀번호가 올바르지 않습니다.");
-      } else if (result.error === "pendingApproval") {
-        alert("회원가입 승인 대기 중입니다.\n관리자의 승인을 기다려주세요.");
-      } else if (result.error === "rejected") {
-        alert("회원가입이 거부되었습니다.\n관리자에게 문의해주세요.");
-      } else {
-        alert("로그인 실패. 다시 시도해주세요.");
-      }
+      alert("로그인 실패. 아이디 또는 비밀번호를 확인해주세요.");
     }
   };
 
@@ -53,7 +43,7 @@ function LoginPage() {
     setShowForgotPassword(false);
   };
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     const username = e.target.regUsername.value;
     const email = e.target.regEmail.value;
@@ -70,7 +60,7 @@ function LoginPage() {
       return;
     }
 
-    const result = register(username, email, password);
+    const result = await register(username, email, password);
 
     if (result.success && result.pending) {
       alert("회원가입 신청이 완료되었습니다!\n관리자 승인 후 로그인이 가능합니다.");
@@ -346,15 +336,16 @@ function LoginPage() {
           }}
           variants={fadeUp}
         >
-          <a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
+          <button
+            type="button"
+            onClick={() => {
               setShowForgotPassword(true);
             }}
             style={{
               color: "#ff6b35",
-              textDecoration: "none",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
               fontWeight: 600,
               margin: "0 10px",
               transition: "color 0.3s ease",
@@ -363,17 +354,18 @@ function LoginPage() {
             onMouseLeave={(e) => (e.target.style.color = "#ff6b35")}
           >
             비밀번호 찾기
-          </a>
+          </button>
           <span style={{ color: "rgba(255, 255, 255, 0.3)" }}>|</span>
-          <a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
+          <button
+            type="button"
+            onClick={() => {
               setShowRegister(true);
             }}
             style={{
               color: "#ff6b35",
-              textDecoration: "none",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
               fontWeight: 600,
               margin: "0 10px",
               transition: "color 0.3s ease",
@@ -382,7 +374,7 @@ function LoginPage() {
             onMouseLeave={(e) => (e.target.style.color = "#ff6b35")}
           >
             회원가입
-          </a>
+          </button>
         </motion.div>
       </motion.div>
 

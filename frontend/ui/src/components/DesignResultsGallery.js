@@ -7,6 +7,7 @@ import "../App.css";
  * @param {Function} onSelectionChange - callback(selectedIds)
  * @param {number} maxSelectable - maximum cards that can be selected
  * @param {Function} onRequestRefine - callback(conceptIndex)
+ * @param {Function} onComplete - callback(selectedIds)
  */
 function DesignResultsGallery({
   concepts = [],
@@ -14,6 +15,7 @@ function DesignResultsGallery({
   maxSelectable = 9,
   defaultSelectedIds = [],
   onRequestRefine,
+  onComplete,
 }) {
   const [selectedIds, setSelectedIds] = useState(defaultSelectedIds);
 
@@ -67,9 +69,11 @@ function DesignResultsGallery({
       <section className="design-results__panel">
         <header className="design-results__header">
           <div>
-            <h2>AI 생성 디자인 결과</h2>
+            <p className="design-results__step">Step 2 / 4 · 복수 선택 지원</p>
+            <h2>Review &amp; Select Design Concepts</h2>
             <p className="design-results__description">
-              마음에 드는 디자인을 선택하고 저장하세요. 각 카드를 클릭하여 디테일을 확인하거나 수정할 수 있습니다.
+              원하는 카드를 선택하고 &lsquo;선택 완료&rsquo; 버튼을 눌러 다음 단계로
+              이동하세요. 이미지를 클릭하면 Before/After 비교를 확인할 수 있습니다.
             </p>
           </div>
           <span className="design-results__badge">
@@ -94,6 +98,9 @@ function DesignResultsGallery({
           {visibleConcepts.map((concept) => {
             const isSelected = selectedIds.includes(concept.id);
             const conceptIndex = concepts.findIndex((item) => item.id === concept.id);
+            const isRefined = concept.sourceImageId !== null && concept.sourceImageId !== undefined;
+            const badgeText = isRefined ? "수정 이미지" : "생성 이미지";
+            const badgeTone = isRefined ? "is-refined" : "is-original";
             return (
               <motion.article
                 key={concept.id}
@@ -125,6 +132,12 @@ function DesignResultsGallery({
                   </button>
                 </div>
                 <div className="design-card__info">
+                  <div className="design-card__meta">
+                    <span className={`design-card__badge ${badgeTone}`}>{badgeText}</span>
+                    {isRefined && concept.sourceImageId && (
+                      <span className="design-card__meta-text">원본 #{concept.sourceImageId}</span>
+                    )}
+                  </div>
                   <h3>{concept.title}</h3>
                   {concept.description && <p>{concept.description}</p>}
                   <div className="design-card__actions">
@@ -157,6 +170,7 @@ function DesignResultsGallery({
             type="button"
             className="design-results__primary"
             disabled={selectedIds.length === 0}
+            onClick={() => onComplete?.(selectedIds)}
           >
             선택 완료
           </button>

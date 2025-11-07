@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import Footer from "./Footer";
 import "../App.css";
 
 function Hero() {
@@ -24,35 +23,19 @@ function Hero() {
     },
   };
 
-  const floatingAnimation = {
-    y: [0, -20, 0],
-    transition: {
-      duration: 3,
-      repeat: Infinity,
-      ease: "easeInOut",
-    },
-  };
-
   return (
     <main
       style={{
-        minHeight: "100vh",
         position: "relative",
         overflow: "hidden",
       }}
     >
       {/* Hero Section with Background Image */}
       <motion.div
+        className="page-hero"
         style={{
-          position: "relative",
-          height: "100vh",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "flex-start",
-          padding: "0 80px",
-          background: "linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?q=80&w=2000&auto=format&fit=crop') center/cover no-repeat",
-          color: "#fff",
+          background:
+            "linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?q=80&w=2000&auto=format&fit=crop') center/cover no-repeat",
         }}
         initial="hidden"
         animate="visible"
@@ -162,7 +145,7 @@ function Hero() {
       <div style={{
         background: "linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, #1a1a1a 20%, #1a1a1a 100%)",
         padding: "80px 20px",
-        marginTop: "-100px",
+        marginTop: "40px",
         position: "relative",
       }}>
         <motion.div
@@ -347,9 +330,6 @@ function Hero() {
           </motion.div>
         </motion.div>
       </div>
-
-      {/* Footer */}
-      <Footer />
     </main>
   );
 }

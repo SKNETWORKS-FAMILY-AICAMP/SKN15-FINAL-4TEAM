@@ -1,23 +1,54 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Papa from "papaparse";
-import Footer from "./Footer";
 import "../App.css";
 
+const ITEMS_PER_PAGE = 10;
+const PAPERS_PER_PAGE = 12;
+const MAX_PAGE_BUTTONS = 10;
+
+const normalizeText = (text) => {
+  if (!text) return "";
+  return text.toString().toLowerCase();
+};
+
+const formatDate = (value) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString();
+};
+
+const getPageNumbers = (current, total) => {
+  if (total <= MAX_PAGE_BUTTONS) {
+    return Array.from({ length: total }, (_, index) => index + 1);
+  }
+
+  if (current <= 6) {
+    return Array.from({ length: MAX_PAGE_BUTTONS }, (_, index) => index + 1);
+  }
+
+  if (current >= total - 5) {
+    return Array.from({ length: MAX_PAGE_BUTTONS }, (_, index) => total - (MAX_PAGE_BUTTONS - 1) + index);
+  }
+
+  return Array.from({ length: MAX_PAGE_BUTTONS }, (_, index) => current - 4 + index);
+};
+
 function LibraryPage() {
+  const [searchInput, setSearchInput] = useState("");
   const [searchText, setSearchText] = useState("");
-  const [activeCategory, setActiveCategory] = useState("blog");
+  const [activeCategory, setActiveCategory] = useState("news");
   const [newsData, setNewsData] = useState([]);
   const [blogData, setBlogData] = useState([]);
   const [paperData, setPaperData] = useState([]);
   const [paperKeywords, setPaperKeywords] = useState([]);
   const [activeKeyword, setActiveKeyword] = useState("all");
+  const [newsPage, setNewsPage] = useState(1);
+  const [blogPage, setBlogPage] = useState(1);
   const [currentPaperPage, setCurrentPaperPage] = useState(1);
-  const [currentNewsPage, setCurrentNewsPage] = useState(1);
-  const [currentBlogPage, setCurrentBlogPage] = useState(1);
   const [isLoadingContent, setIsLoadingContent] = useState(true);
   const [isLoadingPaper, setIsLoadingPaper] = useState(true);
-  const itemsPerPage = 12;
 
   // Animation variants
   const fadeUp = {
@@ -25,19 +56,7 @@ function LibraryPage() {
     visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
   };
 
-  const staggerContainer = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.05,
-      },
-    },
-  };
-
-  // CSV 파일에서 데이터 로드
   useEffect(() => {
-    // hanssem_contents.csv 로드
     setIsLoadingContent(true);
     fetch("/hanssem_contents.csv")
       .then((response) => response.text())
@@ -48,27 +67,25 @@ function LibraryPage() {
           complete: (results) => {
             const data = results.data;
 
-            // 날짜 파싱 함수 (YYYY-MM-DD 형식)
-            const parseDate = (dateStr) => {
-              if (!dateStr) return new Date(0);
-              const parts = dateStr.split('-');
+            const parseDate = (value) => {
+              if (!value) return new Date(0);
+              const parts = value.split("-");
               if (parts.length === 3) {
                 return new Date(parts[0], parts[1] - 1, parts[2]);
               }
-              return new Date(dateStr);
+              return new Date(value);
             };
 
-            // 뉴스와 블로그 데이터 분리 및 최신순 정렬 (전체 데이터)
             const news = data
-              .filter(item => item.source === 'news')
+              .filter((item) => item.source === "news")
               .sort((a, b) => parseDate(b.pubdate) - parseDate(a.pubdate));
 
-            const blog = data
-              .filter(item => item.source === 'blog')
+            const blogs = data
+              .filter((item) => item.source === "blog")
               .sort((a, b) => parseDate(b.pubdate) - parseDate(a.pubdate));
 
             setNewsData(news);
-            setBlogData(blog);
+            setBlogData(blogs);
             setIsLoadingContent(false);
           },
         });
@@ -78,22 +95,14 @@ function LibraryPage() {
         setIsLoadingContent(false);
       });
 
-    // riss_FIN2.csv 로드 (논문 데이터)
     setIsLoadingPaper(true);
     fetch("/riss_FIN2.csv")
-      .then((response) => {
-        console.log("riss_FIN2.csv 응답 상태:", response.status);
-        return response.text();
-      })
+      .then((response) => response.text())
       .then((csvText) => {
-        console.log("riss_FIN2.csv 텍스트 길이:", csvText.length);
         Papa.parse(csvText, {
           header: true,
           skipEmptyLines: true,
           complete: (results) => {
-            console.log("파싱된 논문 데이터:", results.data.length, "개");
-            console.log("첫 번째 논문:", results.data[0]);
-
             const data = results.data.map((item, index) => ({
               id: `paper_${index}`,
               database: item.database,
@@ -107,12 +116,8 @@ function LibraryPage() {
               link: item.link,
             }));
 
-            console.log("가공된 논문 데이터:", data.length, "개");
             setPaperData(data);
-
-            // keyword로 카테고리 추출
             const uniqueKeywords = [...new Set(data.map((item) => item.keyword))].filter(Boolean);
-            console.log("추출된 키워드:", uniqueKeywords);
             setPaperKeywords(uniqueKeywords);
             setIsLoadingPaper(false);
           },
@@ -124,134 +129,178 @@ function LibraryPage() {
       });
   }, []);
 
-  // 카테고리 데이터
+  useEffect(() => {
+    setNewsPage(1);
+    setBlogPage(1);
+    setCurrentPaperPage(1);
+  }, [searchText]);
+
+  useEffect(() => {
+    setCurrentPaperPage(1);
+  }, [activeKeyword]);
+
+  useEffect(() => {
+    if (activeCategory === "news") {
+      setNewsPage(1);
+    } else if (activeCategory === "blog") {
+      setBlogPage(1);
+    } else if (activeCategory === "paper") {
+      setCurrentPaperPage(1);
+    }
+  }, [activeCategory]);
+
   const categories = [
     {
       id: "news",
       name: "News",
-      subtitle: "뉴스",
+      subtitle: "업계 최신 기사",
       icon: "fas fa-newspaper",
     },
     {
       id: "blog",
       name: "Blog Posts",
-      subtitle: "블로그 포스트",
+      subtitle: "블로그 인사이트",
       icon: "fas fa-blog",
     },
     {
       id: "paper",
       name: "Research Papers",
-      subtitle: "논문",
+      subtitle: "논문 자료",
       icon: "fas fa-file-alt",
     },
   ];
 
-  // 검색어로 필터링하는 함수 (실시간 검색)
-  const filterBySearch = (items, searchFields) => {
-    if (!searchText.trim()) return items;
+  const filteredNews = newsData.filter((item) =>
+    normalizeText(item.title).includes(normalizeText(searchText))
+  );
+  const filteredBlog = blogData.filter((item) =>
+    normalizeText(item.title).includes(normalizeText(searchText))
+  );
 
-    const lowerSearch = searchText.toLowerCase().trim();
-    return items.filter(item => {
-      return searchFields.some(field => {
-        const value = item[field];
-        return value && value.toString().toLowerCase().includes(lowerSearch);
-      });
-    });
+  const filteredPapersBase =
+    activeKeyword === "all"
+      ? paperData
+      : paperData.filter((paper) => paper.keyword === activeKeyword);
+
+  const filteredPapers = filteredPapersBase.filter((paper) =>
+    normalizeText(paper.title).includes(normalizeText(searchText))
+  );
+
+  const totalNewsPages = Math.max(1, Math.ceil(filteredNews.length / ITEMS_PER_PAGE));
+  const totalBlogPages = Math.max(1, Math.ceil(filteredBlog.length / ITEMS_PER_PAGE));
+  const totalPaperPages = Math.max(1, Math.ceil(filteredPapers.length / PAPERS_PER_PAGE));
+
+  const currentNewsItems = filteredNews.slice(
+    (newsPage - 1) * ITEMS_PER_PAGE,
+    newsPage * ITEMS_PER_PAGE
+  );
+  const currentBlogItems = filteredBlog.slice(
+    (blogPage - 1) * ITEMS_PER_PAGE,
+    blogPage * ITEMS_PER_PAGE
+  );
+  const currentPapers = filteredPapers.slice(
+    (currentPaperPage - 1) * PAPERS_PER_PAGE,
+    currentPaperPage * PAPERS_PER_PAGE
+  );
+
+  const handleNewsPageChange = (page) => {
+    const next = Math.min(Math.max(page, 1), totalNewsPages);
+    setNewsPage(next);
   };
 
-  // 뉴스 검색 필터링
-  const filteredNews = filterBySearch(newsData, ['title', 'description']);
-
-  // 블로그 검색 필터링
-  const filteredBlogs = filterBySearch(blogData, ['title', 'description']);
-
-  // 논문 필터링 (키워드 + 검색어)
-  const keywordFilteredPapers = activeKeyword === "all"
-    ? paperData
-    : paperData.filter(paper => paper.keyword === activeKeyword);
-
-  const filteredPapers = filterBySearch(keywordFilteredPapers, ['title', 'authors', 'keyword', 'journal']);
-
-  // 뉴스 페이지네이션
-  const totalNewsPages = Math.ceil(filteredNews.length / itemsPerPage);
-  const startNewsIndex = (currentNewsPage - 1) * itemsPerPage;
-  const endNewsIndex = startNewsIndex + itemsPerPage;
-  const currentNews = filteredNews.slice(startNewsIndex, endNewsIndex);
-
-  // 블로그 페이지네이션
-  const totalBlogPages = Math.ceil(filteredBlogs.length / itemsPerPage);
-  const startBlogIndex = (currentBlogPage - 1) * itemsPerPage;
-  const endBlogIndex = startBlogIndex + itemsPerPage;
-  const currentBlogs = filteredBlogs.slice(startBlogIndex, endBlogIndex);
-
-  // 논문 페이지네이션
-  const totalPaperPages = Math.ceil(filteredPapers.length / itemsPerPage);
-  const startPaperIndex = (currentPaperPage - 1) * itemsPerPage;
-  const endPaperIndex = startPaperIndex + itemsPerPage;
-  const currentPapers = filteredPapers.slice(startPaperIndex, endPaperIndex);
-
-  // 페이지 번호 생성 함수 (최대 10개)
-  const getPageNumbers = (currentPage, totalPages) => {
-    const maxPagesToShow = 10;
-    const pages = [];
-    if (totalPages <= maxPagesToShow) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      if (currentPage <= 6) {
-        for (let i = 1; i <= 10; i++) {
-          pages.push(i);
-        }
-      } else if (currentPage >= totalPages - 5) {
-        for (let i = totalPages - 9; i <= totalPages; i++) {
-          pages.push(i);
-        }
-      } else {
-        for (let i = currentPage - 4; i <= currentPage + 5; i++) {
-          pages.push(i);
-        }
-      }
-    }
-    return pages;
+  const handleBlogPageChange = (page) => {
+    const next = Math.min(Math.max(page, 1), totalBlogPages);
+    setBlogPage(next);
   };
 
-  // 카테고리 또는 검색어 변경 시 페이지를 1로 리셋
-  useEffect(() => {
-    setCurrentNewsPage(1);
-    setCurrentBlogPage(1);
-    setCurrentPaperPage(1);
-  }, [activeCategory, searchText]);
+  const handlePaperPageChange = (page) => {
+    const next = Math.min(Math.max(page, 1), totalPaperPages);
+    setCurrentPaperPage(next);
+  };
 
-  // 키워드 변경 시 논문 페이지를 1로 리셋
-  useEffect(() => {
-    setCurrentPaperPage(1);
-  }, [activeKeyword]);
+  const paginationStyles = {
+    container: {
+      marginTop: "30px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: "12px",
+      flexWrap: "wrap",
+    },
+    button: (active = false) => ({
+      minWidth: "44px",
+      padding: "10px 16px",
+      borderRadius: "12px",
+      border: active ? "none" : "1px solid rgba(255, 255, 255, 0.2)",
+      background: active ? "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)" : "rgba(255, 255, 255, 0.05)",
+      color: "#fff",
+      fontWeight: 600,
+      cursor: "pointer",
+      transition: "all 0.3s ease",
+      opacity: active ? 1 : 0.8,
+    }),
+  };
 
+  const renderPagination = (current, total, onChange) => {
+    if (total <= 1) return null;
+    const pages = getPageNumbers(current, total);
+
+    return (
+      <div style={paginationStyles.container}>
+        <button
+          type="button"
+          onClick={() => onChange(current - 1)}
+          disabled={current === 1}
+          style={{
+            ...paginationStyles.button(),
+            opacity: current === 1 ? 0.4 : 0.8,
+            cursor: current === 1 ? "default" : "pointer",
+          }}
+        >
+          이전
+        </button>
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+          {pages.map((page) => (
+            <button
+              key={page}
+              type="button"
+              onClick={() => onChange(page)}
+              style={paginationStyles.button(page === current)}
+            >
+              {page}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => onChange(current + 1)}
+          disabled={current === total}
+          style={{
+            ...paginationStyles.button(),
+            opacity: current === total ? 0.4 : 0.8,
+            cursor: current === total ? "default" : "pointer",
+          }}
+        >
+          다음
+        </button>
+      </div>
+    );
+  };
 
   return (
     <main
       style={{
         minHeight: "100vh",
         background: "#0a0a0a",
-        paddingTop: "0",
-        marginTop: "0",
+        color: "#fff",
       }}
     >
-      {/* Header Section */}
+      {/* Hero */}
       <motion.div
+        className="page-hero"
         style={{
-          position: "relative",
-          height: "500px",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "flex-start",
-          padding: "0 80px",
-          background: "linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1524758631624-e2822e304c36?q=80&w=2000&auto=format&fit=crop') center/cover no-repeat",
-          color: "#fff",
-          marginBottom: "0",
-          marginTop: "0",
+          background:
+            "linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1524758631624-e2822e304c36?q=80&w=2000&auto=format&fit=crop') center/cover no-repeat",
         }}
         initial="hidden"
         animate="visible"
@@ -338,9 +387,9 @@ function LibraryPage() {
             카테고리
           </h2>
 
-          {categories.map((category, index) => (
+          {categories.map((category) => (
             <motion.div
-              key={index}
+              key={category.id}
               onClick={() => setActiveCategory(category.id)}
               style={{
                 marginBottom: "15px",
@@ -358,12 +407,14 @@ function LibraryPage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                marginBottom: "8px",
-              }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  marginBottom: "8px",
+                }}
+              >
                 <i
                   className={category.icon}
                   style={{
@@ -401,39 +452,90 @@ function LibraryPage() {
           {/* Search Bar */}
           <motion.div
             style={{
+              display: "flex",
+              gap: "12px",
               marginBottom: "40px",
+              flexWrap: "wrap",
             }}
             initial="hidden"
             animate="visible"
             variants={fadeUp}
-          >
-            <input
-              type="text"
-              placeholder="Search any documents..."
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
+          > 
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                setSearchText(searchInput.trim());
+              }}
+              style={{ display: "flex", gap: "12px", flexWrap: "wrap", flex: 1 }}
+            >
+              <input
+                type="text"
+                placeholder="Search any documents..."
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                style={{
+                  flex: 1,
+                  minWidth: "250px",
+                  padding: "14px 20px",
+                  border: "2px solid rgba(255, 255, 255, 0.2)",
+                  borderRadius: "12px",
+                  fontSize: "1rem",
+                  transition: "all 0.3s ease",
+                  background: "rgba(255, 255, 255, 0.05)",
+                  color: "#fff",
+                }}
+                onFocus={(event) => {
+                  event.target.style.borderColor = "#ff6b35";
+                  event.target.style.boxShadow = "0 0 0 4px rgba(255, 107, 53, 0.1)";
+                }}
+                onBlur={(event) => {
+                  event.target.style.borderColor = "rgba(255, 255, 255, 0.2)";
+                  event.target.style.boxShadow = "none";
+                }}
+              />
+              <motion.button
+                type="submit"
+                style={{
+                  padding: "14px 30px",
+                  background: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "12px",
+                  fontSize: "1rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  boxShadow: "0 12px 28px rgba(255, 107, 53, 0.35)",
+                }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                Search
+              </motion.button>
+            </form>
+            <motion.button
               style={{
-                width: "100%",
-                padding: "14px 20px",
-                border: "2px solid rgba(255, 255, 255, 0.2)",
+                padding: "14px 25px",
+                background: "rgba(255, 255, 255, 0.15)",
+                color: "#fff",
+                border: "none",
                 borderRadius: "12px",
                 fontSize: "1rem",
-                transition: "all 0.3s ease",
-                background: "rgba(255, 255, 255, 0.05)",
-                color: "#fff",
+                fontWeight: 600,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                boxShadow: "0 8px 20px rgba(0, 0, 0, 0.2)",
               }}
-              onFocus={(e) => {
-                e.target.style.borderColor = "#ff6b35";
-                e.target.style.boxShadow = "0 0 0 4px rgba(255, 107, 53, 0.1)";
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = "rgba(255, 255, 255, 0.2)";
-                e.target.style.boxShadow = "none";
-              }}
-            />
+              whileHover={{ scale: 1.02, background: "rgba(255, 255, 255, 0.2)" }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <i className="fas fa-plus"></i>
+              자료 업로드
+            </motion.button>
           </motion.div>
 
-          {/* Content Section */}
+          {/* News */}
           {activeCategory === "news" && (
             <section style={{ marginBottom: "50px" }}>
               <div
@@ -449,121 +551,73 @@ function LibraryPage() {
                   최신 뉴스
                 </h2>
               </div>
-
               {isLoadingContent ? (
-                <div style={{
-                  textAlign: "center",
-                  padding: "100px 20px",
-                  color: "#667eea",
-                  fontSize: "1.2rem"
-                }}>
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "100px 20px",
+                    color: "#ff6b35",
+                    fontSize: "1.2rem",
+                  }}
+                >
                   <i className="fas fa-spinner fa-spin" style={{ fontSize: "3rem", marginBottom: "20px", display: "block" }}></i>
                   뉴스 데이터를 불러오는 중...
                 </div>
               ) : (
                 <>
-                  {searchText && (
-                    <div style={{
-                      marginBottom: "20px",
-                      padding: "15px",
-                      background: "rgba(255, 107, 53, 0.1)",
-                      borderRadius: "10px",
-                      borderLeft: "4px solid #ff6b35"
-                    }}>
-                      <p style={{ color: "#fff", margin: 0 }}>
-                        <i className="fas fa-search" style={{ marginRight: "8px" }}></i>
-                        "{searchText}" 검색 결과: {filteredNews.length}개
-                      </p>
-                    </div>
-                  )}
-
-                  {/* 뉴스 리스트 */}
-                  <div style={{ marginBottom: "40px" }}>
-                    {currentNews.length > 0 ? (
-                      currentNews.map((item, index) => (
-                        <NewsListItem key={index} item={item} />
-                      ))
-                    ) : (
-                      <p style={{ color: "#6c757d" }}>
-                        {searchText ? "검색 결과가 없습니다." : "뉴스 데이터가 없습니다."}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* 페이지네이션 */}
-                  {filteredNews.length > 0 && totalNewsPages > 1 && (
-                    <motion.div
-                      style={{
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        gap: "8px",
-                        marginTop: "30px",
-                      }}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.3 }}
-                    >
-                      <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
-                        {getPageNumbers(currentNewsPage, totalNewsPages).map((page) => (
-                          <motion.button
-                            key={page}
-                            onClick={() => setCurrentNewsPage(page)}
-                            style={{
-                              padding: "8px 14px",
-                              border: currentNewsPage === page ? "2px solid #ff6b35" : "1px solid rgba(255, 255, 255, 0.2)",
-                              borderRadius: "6px",
-                              fontSize: "0.95rem",
-                              fontWeight: currentNewsPage === page ? 700 : 500,
-                              cursor: "pointer",
-                              background: currentNewsPage === page ? "#ff6b35" : "rgba(255, 255, 255, 0.05)",
-                              color: "#fff",
-                              transition: "all 0.2s ease",
-                              minWidth: "40px",
-                            }}
-                            whileHover={{
-                              scale: 1.05,
-                              borderColor: "#ff6b35",
-                            }}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            {page}
-                          </motion.button>
-                        ))}
-
-                        {currentNewsPage < totalNewsPages && (
-                          <motion.button
-                            onClick={() => setCurrentNewsPage(prev => Math.min(prev + 1, totalNewsPages))}
-                            style={{
-                              padding: "8px 12px",
-                              border: "1px solid rgba(255, 255, 255, 0.2)",
-                              borderRadius: "6px",
-                              fontSize: "0.9rem",
-                              cursor: "pointer",
-                              background: "rgba(255, 255, 255, 0.05)",
-                              color: "#ff6b35",
-                              transition: "all 0.2s ease",
-                            }}
-                            whileHover={{
-                              scale: 1.05,
-                              borderColor: "#ff6b35",
-                              background: "rgba(255, 107, 53, 0.1)",
-                            }}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            다음 <i className="fas fa-chevron-right"></i>
-                          </motion.button>
+                  <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "16px" }}>
+                    {currentNewsItems.map((item, index) => (
+                      <li
+                        key={item.link || `${item.title}-${index}`}
+                        style={{
+                          background: "rgba(255, 255, 255, 0.05)",
+                          borderRadius: "16px",
+                          border: "1px solid rgba(255, 255, 255, 0.08)",
+                          padding: "20px",
+                          transition: "all 0.3s ease",
+                        }}
+                      >
+                        <a
+                          href={item.url || "#"}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: "block",
+                            fontSize: "1.1rem",
+                            fontWeight: 700,
+                            color: "#fff",
+                            marginBottom: "8px",
+                            textDecoration: "none",
+                          }}
+                        >
+                          {item.title}
+                        </a>
+                        <div style={{ display: "flex", gap: "12px", color: "rgba(255, 255, 255, 0.6)", fontSize: "0.9rem" }}>
+                          <span>{formatDate(item.pubdate)}</span>
+                          {item.source && <span>• {item.source}</span>}
+                        </div>
+                        {item.description && (
+                          <p style={{ marginTop: "12px", color: "rgba(255, 255, 255, 0.7)", lineHeight: 1.6 }}>
+                            {item.description}
+                          </p>
                         )}
-                      </div>
-                    </motion.div>
+                      </li>
+                    ))}
+                  </ul>
+                  {filteredNews.length === 0 && (
+                    <p style={{ marginTop: "30px", color: "rgba(255, 255, 255, 0.6)", textAlign: "center" }}>
+                      검색 조건에 맞는 뉴스가 없습니다.
+                    </p>
                   )}
+                  {renderPagination(newsPage, totalNewsPages, handleNewsPageChange)}
                 </>
               )}
             </section>
           )}
 
+          {/* Blog */}
           {activeCategory === "blog" && (
-            <section>
+            <section style={{ marginBottom: "50px" }}>
               <div
                 style={{
                   display: "flex",
@@ -574,176 +628,90 @@ function LibraryPage() {
               >
                 <h2 style={{ fontSize: "1.8rem", fontWeight: 700, margin: 0, color: "#fff" }}>
                   <i className="fas fa-blog" style={{ marginRight: "10px", color: "#ff6b35" }}></i>
-                  최신 블로그
+                  블로그 포스트
                 </h2>
               </div>
-
               {isLoadingContent ? (
-                <div style={{
-                  textAlign: "center",
-                  padding: "100px 20px",
-                  color: "#667eea",
-                  fontSize: "1.2rem"
-                }}>
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "100px 20px",
+                    color: "#ff6b35",
+                    fontSize: "1.2rem",
+                  }}
+                >
                   <i className="fas fa-spinner fa-spin" style={{ fontSize: "3rem", marginBottom: "20px", display: "block" }}></i>
                   블로그 데이터를 불러오는 중...
                 </div>
               ) : (
                 <>
-                  {searchText && (
-                    <div style={{
-                      marginBottom: "20px",
-                      padding: "15px",
-                      background: "rgba(255, 107, 53, 0.1)",
-                      borderRadius: "10px",
-                      borderLeft: "4px solid #ff6b35"
-                    }}>
-                      <p style={{ color: "#fff", margin: 0 }}>
-                        <i className="fas fa-search" style={{ marginRight: "8px" }}></i>
-                        "{searchText}" 검색 결과: {filteredBlogs.length}개
-                      </p>
-                    </div>
-                  )}
-
-                  {/* 블로그 리스트 */}
-                  <div style={{ marginBottom: "40px" }}>
-                    {currentBlogs.length > 0 ? (
-                      currentBlogs.map((item, index) => (
-                        <NewsListItem key={index} item={item} />
-                      ))
-                    ) : (
-                      <p style={{ color: "#6c757d" }}>
-                        {searchText ? "검색 결과가 없습니다." : "블로그 데이터가 없습니다."}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* 페이지네이션 */}
-                  {filteredBlogs.length > 0 && totalBlogPages > 1 && (
-                    <motion.div
-                      style={{
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        gap: "8px",
-                        marginTop: "30px",
-                      }}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.3 }}
-                    >
-                      <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
-                        {getPageNumbers(currentBlogPage, totalBlogPages).map((page) => (
-                          <motion.button
-                            key={page}
-                            onClick={() => setCurrentBlogPage(page)}
-                            style={{
-                              padding: "8px 14px",
-                              border: currentBlogPage === page ? "2px solid #ff6b35" : "1px solid rgba(255, 255, 255, 0.2)",
-                              borderRadius: "6px",
-                              fontSize: "0.95rem",
-                              fontWeight: currentBlogPage === page ? 700 : 500,
-                              cursor: "pointer",
-                              background: currentBlogPage === page ? "#ff6b35" : "rgba(255, 255, 255, 0.05)",
-                              color: "#fff",
-                              transition: "all 0.2s ease",
-                              minWidth: "40px",
-                            }}
-                            whileHover={{
-                              scale: 1.05,
-                              borderColor: "#ff6b35",
-                            }}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            {page}
-                          </motion.button>
-                        ))}
-
-                        {currentBlogPage < totalBlogPages && (
-                          <motion.button
-                            onClick={() => setCurrentBlogPage(prev => Math.min(prev + 1, totalBlogPages))}
-                            style={{
-                              padding: "8px 12px",
-                              border: "1px solid rgba(255, 255, 255, 0.2)",
-                              borderRadius: "6px",
-                              fontSize: "0.9rem",
-                              cursor: "pointer",
-                              background: "rgba(255, 255, 255, 0.05)",
-                              color: "#ff6b35",
-                              transition: "all 0.2s ease",
-                            }}
-                            whileHover={{
-                              scale: 1.05,
-                              borderColor: "#ff6b35",
-                              background: "rgba(255, 107, 53, 0.1)",
-                            }}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            다음 <i className="fas fa-chevron-right"></i>
-                          </motion.button>
+                  <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "16px" }}>
+                    {currentBlogItems.map((item, index) => (
+                      <li
+                        key={item.link || `${item.title}-${index}`}
+                        style={{
+                          background: "rgba(255, 255, 255, 0.05)",
+                          borderRadius: "16px",
+                          border: "1px solid rgba(255, 255, 255, 0.08)",
+                          padding: "20px",
+                          transition: "all 0.3s ease",
+                        }}
+                      >
+                        <a
+                          href={item.url || "#"}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: "block",
+                            fontSize: "1.1rem",
+                            fontWeight: 700,
+                            color: "#fff",
+                            marginBottom: "8px",
+                            textDecoration: "none",
+                          }}
+                        >
+                          {item.title}
+                        </a>
+                        <div style={{ display: "flex", gap: "12px", color: "rgba(255, 255, 255, 0.6)", fontSize: "0.9rem" }}>
+                          <span>{formatDate(item.pubdate)}</span>
+                          {item.blog_name && <span>• {item.blog_name}</span>}
+                        </div>
+                        {item.description && (
+                          <p style={{ marginTop: "12px", color: "rgba(255, 255, 255, 0.7)", lineHeight: 1.6 }}>
+                            {item.description}
+                          </p>
                         )}
-                      </div>
-                    </motion.div>
+                      </li>
+                    ))}
+                  </ul>
+                  {filteredBlog.length === 0 && (
+                    <p style={{ marginTop: "30px", color: "rgba(255, 255, 255, 0.6)", textAlign: "center" }}>
+                      검색 조건에 맞는 블로그 포스트가 없습니다.
+                    </p>
                   )}
+                  {renderPagination(blogPage, totalBlogPages, handleBlogPageChange)}
                 </>
               )}
             </section>
           )}
 
+          {/* Papers */}
           {activeCategory === "paper" && (
-            <section>
+            <section style={{ marginBottom: "50px" }}>
               <div
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
                   marginBottom: "25px",
+                  flexWrap: "wrap",
+                  gap: "16px",
                 }}
               >
                 <h2 style={{ fontSize: "1.8rem", fontWeight: 700, margin: 0, color: "#fff" }}>
                   <i className="fas fa-file-alt" style={{ marginRight: "10px", color: "#ff6b35" }}></i>
                   논문
                 </h2>
-              </div>
-
-              {isLoadingPaper ? (
-                <div style={{
-                  textAlign: "center",
-                  padding: "100px 20px",
-                  color: "#667eea",
-                  fontSize: "1.2rem"
-                }}>
-                  <i className="fas fa-spinner fa-spin" style={{ fontSize: "3rem", marginBottom: "20px", display: "block" }}></i>
-                  논문 데이터를 불러오는 중...
-                </div>
-              ) : (
-                <>
-              {/* Search Results Display */}
-              {searchText && (
-                <div style={{
-                  marginBottom: "20px",
-                  padding: "15px",
-                  background: "rgba(255, 107, 53, 0.1)",
-                  borderRadius: "10px",
-                  borderLeft: "4px solid #ff6b35"
-                }}>
-                  <p style={{ color: "#fff", margin: 0 }}>
-                    <i className="fas fa-search" style={{ marginRight: "8px" }}></i>
-                    "{searchText}" 검색 결과: {filteredPapers.length}개
-                  </p>
-                </div>
-              )}
-
-              {/* Keyword 필터 */}
-              <div style={{ marginBottom: "30px" }}>
-                <h3 style={{
-                  fontSize: "1.1rem",
-                  fontWeight: 600,
-                  color: "rgba(255, 255, 255, 0.9)",
-                  marginBottom: "15px"
-                }}>
-                  키워드 선택
-                </h3>
                 <div
                   style={{
                     display: "flex",
@@ -751,350 +719,111 @@ function LibraryPage() {
                     gap: "10px",
                   }}
                 >
-                  <motion.button
+                  <button
+                    type="button"
                     onClick={() => setActiveKeyword("all")}
                     style={{
-                      padding: "10px 20px",
-                      border: "none",
+                      padding: "8px 16px",
                       borderRadius: "20px",
-                      fontSize: "0.95rem",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      transition: "all 0.3s ease",
+                      border: activeKeyword === "all" ? "none" : "1px solid rgba(255, 255, 255, 0.25)",
                       background: activeKeyword === "all"
                         ? "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)"
-                        : "#4a4a4a",
+                        : "rgba(255, 255, 255, 0.05)",
                       color: "#fff",
-                      boxShadow: activeKeyword === "all"
-                        ? "0 6px 15px rgba(255, 107, 53, 0.4)"
-                        : "0 2px 8px rgba(0, 0, 0, 0.3)",
+                      cursor: "pointer",
                     }}
-                    whileHover={{
-                      scale: 1.05,
-                      boxShadow: "0 8px 20px rgba(255, 107, 53, 0.5)",
-                    }}
-                    whileTap={{ scale: 0.95 }}
                   >
                     전체
-                  </motion.button>
+                  </button>
                   {paperKeywords.map((keyword) => (
-                    <motion.button
+                    <button
                       key={keyword}
+                      type="button"
                       onClick={() => setActiveKeyword(keyword)}
                       style={{
-                        padding: "10px 20px",
-                        border: "none",
+                        padding: "8px 16px",
                         borderRadius: "20px",
-                        fontSize: "0.95rem",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        transition: "all 0.3s ease",
+                        border: activeKeyword === keyword ? "none" : "1px solid rgba(255, 255, 255, 0.25)",
                         background: activeKeyword === keyword
                           ? "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)"
-                          : "#4a4a4a",
+                          : "rgba(255, 255, 255, 0.05)",
                         color: "#fff",
-                        boxShadow: activeKeyword === keyword
-                          ? "0 6px 15px rgba(255, 107, 53, 0.4)"
-                          : "0 2px 8px rgba(0, 0, 0, 0.3)",
+                        cursor: "pointer",
                       }}
-                      whileHover={{
-                        scale: 1.05,
-                        boxShadow: "0 8px 20px rgba(255, 107, 53, 0.5)",
-                      }}
-                      whileTap={{ scale: 0.95 }}
                     >
                       {keyword}
-                    </motion.button>
+                    </button>
                   ))}
                 </div>
               </div>
 
-              {/* 논문 목록 */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                  gap: "20px",
-                  marginBottom: "40px",
-                }}
-              >
-                {currentPapers.length > 0 ? (
-                  currentPapers.map((paper) => (
-                    <PaperCard key={paper.id} paper={paper} variants={fadeUp} />
-                  ))
-                ) : (
-                  <p style={{ color: "#6c757d", gridColumn: "1 / -1" }}>
-                    {paperData.length === 0 ? "논문 데이터를 불러오는 중..." :
-                     searchText ? "검색 결과가 없습니다." : "해당 키워드의 논문이 없습니다."}
-                  </p>
-                )}
-              </div>
-
-              {/* 페이지네이션 */}
-              {filteredPapers.length > 0 && totalPaperPages > 1 && (
-                <motion.div
+              {isLoadingPaper ? (
+                <div
                   style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    gap: "8px",
-                    marginTop: "30px",
+                    textAlign: "center",
+                    padding: "100px 20px",
+                    color: "#ff6b35",
+                    fontSize: "1.2rem",
                   }}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.3 }}
                 >
-                  <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
-                    {getPageNumbers(currentPaperPage, totalPaperPages).map((page) => (
-                      <motion.button
-                        key={page}
-                        onClick={() => setCurrentPaperPage(page)}
+                  <i className="fas fa-spinner fa-spin" style={{ fontSize: "3rem", marginBottom: "20px", display: "block" }}></i>
+                  논문 데이터를 불러오는 중...
+                </div>
+              ) : (
+                <>
+                  <div
+                    style={{
+                      display: "grid",
+                      gap: "24px",
+                      gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                    }}
+                  >
+                    {currentPapers.map((paper) => (
+                      <div
+                        key={paper.id}
                         style={{
-                          padding: "8px 14px",
-                          border: currentPaperPage === page ? "2px solid #ff6b35" : "1px solid rgba(255, 255, 255, 0.2)",
-                          borderRadius: "6px",
-                          fontSize: "0.95rem",
-                          fontWeight: currentPaperPage === page ? 700 : 500,
-                          cursor: "pointer",
-                          background: currentPaperPage === page ? "#ff6b35" : "rgba(255, 255, 255, 0.05)",
-                          color: "#fff",
-                          transition: "all 0.2s ease",
-                          minWidth: "40px",
-                        }}
-                        whileHover={{
-                          scale: 1.05,
-                          borderColor: "#ff6b35",
-                        }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        {page}
-                      </motion.button>
-                    ))}
-
-                    {currentPaperPage < totalPaperPages && (
-                      <motion.button
-                        onClick={() => setCurrentPaperPage(prev => Math.min(prev + 1, totalPaperPages))}
-                        style={{
-                          padding: "8px 12px",
-                          border: "1px solid rgba(255, 255, 255, 0.2)",
-                          borderRadius: "6px",
-                          fontSize: "0.9rem",
-                          cursor: "pointer",
                           background: "rgba(255, 255, 255, 0.05)",
-                          color: "#ff6b35",
-                          transition: "all 0.2s ease",
+                          borderRadius: "18px",
+                          border: "1px solid rgba(255, 255, 255, 0.08)",
+                          padding: "24px",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "12px",
                         }}
-                        whileHover={{
-                          scale: 1.05,
-                          borderColor: "#ff6b35",
-                          background: "rgba(255, 107, 53, 0.1)",
-                        }}
-                        whileTap={{ scale: 0.95 }}
                       >
-                        다음 <i className="fas fa-chevron-right"></i>
-                      </motion.button>
-                    )}
+                        <a
+                          href={paper.link || "#"}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            fontSize: "1.05rem",
+                            fontWeight: 700,
+                            color: "#fff",
+                            textDecoration: "none",
+                          }}
+                        >
+                          {paper.title}
+                        </a>
+                        <div style={{ fontSize: "0.9rem", color: "rgba(255, 255, 255, 0.6)", lineHeight: 1.6 }}>
+                          {paper.authors && <div>저자: {paper.authors}</div>}
+                          {paper.year && <div>발행년도: {paper.year}</div>}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </motion.div>
-              )}
-              </>
+                  {filteredPapers.length === 0 && (
+                    <p style={{ marginTop: "30px", color: "rgba(255, 255, 255, 0.6)", textAlign: "center" }}>
+                      검색 조건에 맞는 논문이 없습니다.
+                    </p>
+                  )}
+                  {renderPagination(currentPaperPage, totalPaperPages, handlePaperPageChange)}
+                </>
               )}
             </section>
           )}
         </div>
       </div>
-
-      {/* Footer */}
-      <Footer />
     </main>
-  );
-}
-
-// News List Item Component (리스트 형태)
-function NewsListItem({ item }) {
-  return (
-    <a
-      href={item.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      style={{
-        display: "block",
-        background: "rgba(255, 255, 255, 0.05)",
-        backdropFilter: "blur(10px)",
-        WebkitBackdropFilter: "blur(10px)",
-        borderRadius: "12px",
-        padding: "20px",
-        marginBottom: "15px",
-        border: "1px solid rgba(255, 255, 255, 0.1)",
-        transition: "all 0.3s ease",
-        cursor: "pointer",
-        textDecoration: "none",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
-        e.currentTarget.style.borderColor = "#ff6b35";
-        e.currentTarget.style.transform = "translateX(5px)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
-        e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.1)";
-        e.currentTarget.style.transform = "translateX(0)";
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div style={{ flex: 1 }}>
-          <h3
-            style={{
-              fontSize: "1.1rem",
-              fontWeight: 600,
-              color: "#fff",
-              margin: "0 0 10px",
-              lineHeight: "1.5",
-            }}
-          >
-            {item.title}
-          </h3>
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            fontSize: "0.9rem",
-            color: "rgba(255, 255, 255, 0.6)",
-          }}>
-            <i className="fas fa-calendar-alt" style={{ color: "#ff6b35" }}></i>
-            <span>{item.pubdate}</span>
-          </div>
-        </div>
-        <div style={{
-          marginLeft: "20px",
-          color: "#ff6b35",
-          fontSize: "1.2rem",
-        }}>
-          <i className="fas fa-chevron-right"></i>
-        </div>
-      </div>
-    </a>
-  );
-}
-
-// Paper Card Component for Research Papers
-function PaperCard({ paper }) {
-  return (
-    <a
-      href={paper.link}
-      target="_blank"
-      rel="noopener noreferrer"
-      style={{
-        background: "rgba(255, 255, 255, 0.05)",
-        backdropFilter: "blur(10px)",
-        WebkitBackdropFilter: "blur(10px)",
-        borderRadius: "15px",
-        overflow: "hidden",
-        border: "1px solid rgba(255, 255, 255, 0.1)",
-        boxShadow: "0 5px 15px rgba(0, 0, 0, 0.3)",
-        transition: "all 0.3s ease",
-        cursor: "pointer",
-        position: "relative",
-        textDecoration: "none",
-        display: "block",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = "translateY(-8px)";
-        e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
-        e.currentTarget.style.boxShadow = "0 15px 30px rgba(0, 0, 0, 0.5)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = "translateY(0)";
-        e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
-        e.currentTarget.style.boxShadow = "0 5px 15px rgba(0, 0, 0, 0.3)";
-      }}
-    >
-      {/* Info */}
-      <div style={{ padding: "20px" }}>
-        {/* Keyword Badge */}
-        <div style={{ marginBottom: "12px" }}>
-          <span style={{
-            display: "inline-block",
-            padding: "4px 12px",
-            background: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
-            color: "#fff",
-            borderRadius: "12px",
-            fontSize: "0.8rem",
-            fontWeight: 600,
-          }}>
-            {paper.keyword}
-          </span>
-        </div>
-
-        <h3
-          style={{
-            fontSize: "1.05rem",
-            fontWeight: 600,
-            color: "#fff",
-            margin: "0 0 12px",
-            lineHeight: "1.5",
-            overflow: "hidden",
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical",
-          }}
-        >
-          {paper.title}
-        </h3>
-
-        {/* Authors */}
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "6px",
-          fontSize: "0.85rem",
-          color: "rgba(255, 255, 255, 0.7)",
-          marginBottom: "8px",
-        }}>
-          <i className="fas fa-user" style={{ color: "#ff6b35" }}></i>
-          <span style={{
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}>{paper.authors}</span>
-        </div>
-
-        {/* Journal & Year */}
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "6px",
-          fontSize: "0.85rem",
-          color: "rgba(255, 255, 255, 0.7)",
-          marginBottom: "8px",
-        }}>
-          <i className="fas fa-book" style={{ color: "#ff6b35" }}></i>
-          <span style={{
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}>{paper.journal}</span>
-        </div>
-
-        <div style={{
-          marginTop: "12px",
-          paddingTop: "12px",
-          borderTop: "1px solid rgba(255, 255, 255, 0.1)",
-        }}>
-          <span style={{
-            fontSize: "0.85rem",
-            color: "#ff6b35",
-            fontWeight: 600,
-            display: "flex",
-            alignItems: "center",
-            gap: "5px",
-          }}>
-            논문 보기
-            <i className="fas fa-arrow-right"></i>
-          </span>
-        </div>
-      </div>
-    </a>
   );
 }
 

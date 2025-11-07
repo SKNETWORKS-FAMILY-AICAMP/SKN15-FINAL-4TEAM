@@ -3,17 +3,14 @@ import axios from "axios";
 
 const getDefaultApiBase = () => {
   if (typeof window !== "undefined") {
-    const protocol = window.location.protocol; // "http:" 또는 "https:" (콜론 포함)
-    // 백엔드 포트는 항상 9000 (환경변수 의존성 제거)
-    return `${protocol}//${window.location.hostname}:9000/api`;
+    const protocol = window.location.protocol === "https:" ? "https" : "http";
+    const port = process.env.REACT_APP_BACKEND_PORT ?? "8000";
+    return `${protocol}//${window.location.hostname}:${port}/api`;
   }
-  return "http://127.0.0.1:9000/api";
+  return "http://127.0.0.1:8000/api";
 };
 
 const API_BASE = process.env.REACT_APP_API_BASE ?? getDefaultApiBase(); // Django 서버 주소
-
-console.log("🔧 API_BASE 설정:", API_BASE);
-console.log("🔧 window.location:", typeof window !== "undefined" ? window.location.href : "N/A");
 
 // ✅ 회원가입
 export const registerUser = async (user_id, password, extraFields = {}) => {
@@ -47,9 +44,7 @@ export const loginUser = async (user_id, password) => {
 // ✅ 프로젝트 생성
 export const createProject = async (formData) => {
   try {
-    const res = await axios.post(`${API_BASE}/projects/create/`, formData, {
-      timeout: 240000, // 이미지 생성이 오래 걸릴 수 있어 여유 시간을 둔다.
-    });
+    const res = await axios.post(`${API_BASE}/projects/create/`, formData);
     return res.data;
   } catch (error) {
     console.error("❌ 프로젝트 생성 실패:", error.response?.data || error);
@@ -71,18 +66,10 @@ export const getProjects = async (user_id) => {
 // ✅ 프로젝트 생성 이미지 조회
 export const getProjectAiImages = async (project_id) => {
   try {
-    const url = `${API_BASE}/projects/${project_id}/ai-images/`;
-    const userId = localStorage.getItem("user_id");
-    console.log("🌐 AI 이미지 요청 URL:", url);
-    const res = await axios.get(url, {
-      headers: userId ? { 'X-User-ID': userId } : {}
-    });
-    console.log("📡 AI 이미지 응답:", res);
-    console.log("📦 AI 이미지 데이터:", res.data);
+    const res = await axios.get(`${API_BASE}/projects/${project_id}/ai-images/`);
     return res.data;
   } catch (error) {
-    console.error("❌ AI 이미지 조회 실패:", error);
-    console.error("❌ 에러 응답:", error.response);
+    console.error("❌ AI 이미지 조회 실패:", error.response?.data || error);
     throw error;
   }
 };
@@ -90,14 +77,10 @@ export const getProjectAiImages = async (project_id) => {
 // ✅ 프로젝트 이미지 부분 수정
 export const refineProjectImage = async (project_id, image_id, refinement_prompt) => {
   try {
-    const userId = localStorage.getItem("user_id");
     const res = await axios.post(
       `${API_BASE}/projects/${project_id}/ai-images/${image_id}/refine/`,
       { refinement_prompt },
-      {
-        timeout: 180000,
-        headers: userId ? { 'X-User-ID': userId } : {}
-      }
+      { timeout: 180000 }
     );
     return res.data;
   } catch (error) {
@@ -115,6 +98,39 @@ export const updateProjectStatus = async (project_id, newStatus) => {
     return res.data;
   } catch (error) {
     console.error("❌ 상태 변경 실패:", error.response?.data || error);
+    throw error;
+  }
+};
+
+// ✅ 사용자 프로필 조회
+export const getUserProfile = async (user_id) => {
+  try {
+    const res = await axios.get(`${API_BASE}/users/${user_id}/`);
+    return res.data;
+  } catch (error) {
+    console.error("❌ 사용자 프로필 조회 실패:", error.response?.data || error);
+    throw error;
+  }
+};
+
+// ✅ 사용자 프로필 업데이트
+export const updateUserProfile = async (user_id, payload) => {
+  try {
+    const res = await axios.patch(`${API_BASE}/users/${user_id}/`, payload);
+    return res.data;
+  } catch (error) {
+    console.error("❌ 사용자 프로필 업데이트 실패:", error.response?.data || error);
+    throw error;
+  }
+};
+
+// ✅ 비밀번호 변경
+export const changeUserPassword = async (user_id, payload) => {
+  try {
+    const res = await axios.post(`${API_BASE}/users/${user_id}/change-password/`, payload);
+    return res.data;
+  } catch (error) {
+    console.error("❌ 비밀번호 변경 실패:", error.response?.data || error);
     throw error;
   }
 };

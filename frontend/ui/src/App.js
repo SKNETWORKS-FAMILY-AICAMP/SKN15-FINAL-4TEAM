@@ -12,6 +12,9 @@ import ResourcesPage from "./components/ResourcesPage";
 import LibraryPage from "./components/LibraryPage";
 import AdminPage from "./components/AdminPage";
 import ResultsPage from "./components/ResultsPage";
+import ProjectSummaryPage from "./components/ProjectSummaryPage";
+import MyPage from "./components/MyPage";
+import Footer from "./components/Footer";
 import "./App.css";  // 전체 공통 스타일
 
 function App() {
@@ -33,6 +36,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mypage"
+            element={
+              <ProtectedRoute>
+                <MyPage />
               </ProtectedRoute>
             }
           />
@@ -62,7 +73,16 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/results/:projectId/summary"
+            element={
+              <ProtectedRoute>
+                <ProjectSummaryPage />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
+        <Footer />
       </AuthProvider>
     </Router>
   );

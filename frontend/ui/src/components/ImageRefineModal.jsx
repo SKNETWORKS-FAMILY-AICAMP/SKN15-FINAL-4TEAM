@@ -110,7 +110,7 @@ function ImageRefineModal({
               type="button"
               className="refine-submit"
               onClick={handleSubmit}
-              disabled={isSubmitting || !prompt.trim()}
+              disabled={isSubmitting || !prompt.trim() || !concept}
             >
               {isSubmitting ? "생성 중..." : "생성"}
             </button>
@@ -119,7 +119,13 @@ function ImageRefineModal({
 
         {isSubmitting && (
           <div className="refine-spinner">
-            <div className="refine-spinner__circle" />
+            <div className="global-loader">
+              <div className="global-loader__spinner" aria-hidden="true" />
+              <div className="global-loader__text">
+                <p className="global-loader__title">수정 이미지를 생성 중입니다</p>
+                <p className="global-loader__note">선택한 조건을 반영해 새 버전을 준비하고 있어요.</p>
+              </div>
+            </div>
           </div>
         )}
       </div>

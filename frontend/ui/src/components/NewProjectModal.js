@@ -1,12 +1,10 @@
 // ✅ NewProjectModal.js (수정 버전)
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import axios from "axios";
+import { createProject } from "../api/projectAPI";
 import "./NewProjectModal.css";
 
 function NewProjectModal({ onClose, onCreated }) {
-  const navigate = useNavigate();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [title, setTitle] = useState("새 프로젝트 생성");
   const [form, setForm] = useState({
@@ -17,13 +15,45 @@ function NewProjectModal({ onClose, onCreated }) {
     budget: "",
     family: "",
     style: "",
+    refinement: "",
     emptyRoom: false,
+    variations: 3,
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [pipelineResult, setPipelineResult] = useState(null);
+  const [errorMessage, setErrorMessage] = useState(null);
+
+  const pipelineImageCount =
+    pipelineResult?.count ?? pipelineResult?.images?.length ?? 0;
+  const pipelineWarnings = pipelineResult?.warnings ?? [];
+  const pipelineStatusText = (() => {
+    if (!pipelineResult) return "";
+    if (pipelineResult.status === "completed") {
+      return `AI 이미지 ${pipelineImageCount}개가 생성되었습니다.`;
+    }
+    if (pipelineResult.status === "partial") {
+      const warning = pipelineWarnings[0]
+        ? ` (일부 변형이 실패했습니다: ${pipelineWarnings[0]})`
+        : "";
+      return `AI 이미지 ${pipelineImageCount}개가 생성되었습니다.${warning}`;
+    }
+    if (pipelineResult.status === "failed") {
+      return `AI 생성이 실패했습니다: ${pipelineResult.reason}`;
+    }
+    if (pipelineResult.reason) {
+      return `AI 생성이 건너뛰어졌습니다: ${pipelineResult.reason}`;
+    }
+    return "AI 생성이 건너뛰어졌습니다.";
+  })();
 
   // ✅ 입력값 변경
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    if (name === "variations") {
+      const numeric = Math.min(9, Math.max(1, Number(value) || 1));
+      setForm({ ...form, variations: numeric });
+      return;
+    }
     setForm({ ...form, [name]: type === "checkbox" ? checked : value });
   };
 
@@ -45,11 +75,12 @@ function NewProjectModal({ onClose, onCreated }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-
-    const user_id = localStorage.getItem("user_id") || "guest";
+    setPipelineResult(null);
+    setErrorMessage(null);
 
     try {
       const formData = new FormData();
+      const user_id = localStorage.getItem("user_id");
 
       // ✅ 백엔드 컬럼명에 맞게 key 변경
       formData.append("user_id", user_id);
@@ -59,136 +90,39 @@ function NewProjectModal({ onClose, onCreated }) {
       formData.append("budget_range", form.budget);
       formData.append("family_type", form.family);
       formData.append("design_style", form.style);
+      formData.append("refinement_prompt", form.refinement);
+      formData.append("image_variations", String(form.variations || 3));
+      formData.append("empty_room", form.emptyRoom ? "true" : "false");
       if (form.image) formData.append("image", form.image);
-
-      const response = await axios.post(
-        `http://${window.location.hostname}:9000/api/projects/create/`,
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-          timeout: 600000, // 10분 - AI 이미지 9개 생성 대기 시간
-        }
-      );
-
-      console.log("✅ 프로젝트 생성 성공:", response.data);
-
-      // AI 이미지 생성 성공 여부 확인
-      const projectId = response.data.project_id;
-      const pipelineStatus = response.data.pipeline?.status;
-
-      if (pipelineStatus === "completed" || pipelineStatus === "partial") {
-        // AI 이미지가 생성되었으면 결과 페이지로 이동
-        alert(`프로젝트가 생성되었습니다! AI가 ${response.data.pipeline.count}개의 디자인을 생성했습니다.`);
-        navigate(`/results/${projectId}`);
-      } else if (pipelineStatus === "failed") {
-        // AI 생성 실패
-        alert(`프로젝트는 생성되었지만 AI 이미지 생성에 실패했습니다.\n이유: ${response.data.pipeline.reason}`);
-        if (onCreated) onCreated();
-        if (onClose) onClose();
-      } else {
-        // 이미지 없이 생성된 경우
-        alert("프로젝트가 생성되었습니다!");
-        if (onCreated) onCreated();
-        if (onClose) onClose();
+      else {
+        setErrorMessage("원본 이미지를 업로드해 주세요.");
+        setIsLoading(false);
+        return;
       }
+
+      const result = await createProject(formData);
+
+      setPipelineResult(result.pipeline);
+      onCreated?.(result);
     } catch (error) {
       console.error("❌ 프로젝트 생성 실패:", error.response?.data || error);
-
-      // 백엔드 서버가 없는 경우 로컬 저장소에 임시 저장
-      if (error.code === "ERR_NETWORK" || error.code === "ECONNREFUSED") {
-        console.log("⚠️ 백엔드 서버가 실행되지 않았습니다. 로컬에 임시 저장합니다.");
-
-        const project = {
-          id: Date.now(),
-          userId: user_id,
-          title,
-          type: form.type,
-          space: form.space,
-          budget: form.budget,
-          family: form.family,
-          style: form.style,
-          imagePreview: form.imagePreview,
-          createdAt: new Date().toISOString(),
-          status: "진행중"
-        };
-
-        // 로컬 스토리지에 저장
-        const existingProjects = JSON.parse(localStorage.getItem("projects") || "[]");
-        existingProjects.push(project);
-        localStorage.setItem("projects", JSON.stringify(existingProjects));
-
-        alert("백엔드 서버가 실행되지 않아 프로젝트를 임시로 로컬에 저장했습니다.\n\n백엔드 서버를 실행하려면:\npython manage.py runserver");
-
-        if (onCreated) {
-          onCreated();
-        } else if (onClose) {
-          onClose();
-        }
-      } else {
-        alert("프로젝트 생성 중 오류가 발생했습니다.\n\n" + (error.response?.data?.message || error.message));
-      }
+      const message =
+        error.response?.data?.pipeline?.reason ||
+        error.response?.data?.error ||
+        "프로젝트 생성 중 오류가 발생했습니다.";
+      setErrorMessage(message);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const isBlocked = isLoading;
+  const variationCountText = `${form.variations || 1}개의 인테리어 이미지를 생성 중입니다.`;
+
   return (
     <AnimatePresence>
-      {/* 로딩 팝업 */}
-      {isLoading && (
-        <motion.div
-          className="loading-overlay"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.7)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 10000,
-          }}
-        >
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            style={{
-              backgroundColor: "white",
-              padding: "40px 60px",
-              borderRadius: "20px",
-              textAlign: "center",
-              boxShadow: "0 10px 40px rgba(0, 0, 0, 0.3)",
-            }}
-          >
-            <div
-              style={{
-                width: "60px",
-                height: "60px",
-                border: "5px solid #f3f3f3",
-                borderTop: "5px solid #ff6b6b",
-                borderRadius: "50%",
-                margin: "0 auto 20px",
-                animation: "spin 1s linear infinite",
-              }}
-            />
-            <h3 style={{ margin: "0 0 10px", fontSize: "24px", color: "#333" }}>
-              AI 이미지 9개 생성 중...
-            </h3>
-            <p style={{ margin: 0, color: "#666", fontSize: "16px" }}>
-              9개의 인테리어 디자인을 생성하는 중입니다.<br />
-              최대 10분 정도 소요될 수 있으니 잠시만 기다려주세요!
-            </p>
-          </motion.div>
-        </motion.div>
-      )}
-
       <motion.div
-        className="modal-overlay"
+        className={`modal-overlay ${isBlocked ? "is-loading" : ""}`}
         onClick={onClose}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -271,6 +205,32 @@ function NewProjectModal({ onClose, onCreated }) {
                 </div>
               ))}
 
+              <div className="form-group">
+                <label>세부 수정 요청</label>
+                <textarea
+                  name="refinement"
+                  value={form.refinement}
+                  onChange={handleChange}
+                  placeholder="추가로 반영하고 싶은 사항이 있으면 입력하세요. (예: 오른쪽 벽에 액자를 걸어주세요)"
+                  rows={3}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>생성할 시안 개수 (1~9)</label>
+                <input
+                  type="number"
+                  name="variations"
+                  min="1"
+                  max="9"
+                  value={form.variations}
+                  onChange={handleChange}
+                />
+                <p className="field-help">
+                  한 번에 생성할 AI 이미지 수를 선택하세요. 최대 9개까지 가능합니다.
+                </p>
+              </div>
+
               <label className="checkbox">
                 <input
                   type="checkbox"
@@ -290,11 +250,50 @@ function NewProjectModal({ onClose, onCreated }) {
               >
                 {isLoading ? "생성 중..." : "프로젝트 생성"}
               </motion.button>
+
+              {errorMessage && (
+                <div className="status-message error">{errorMessage}</div>
+              )}
+
+          {pipelineResult && (
+            <div
+              className={`status-message ${
+                pipelineResult.status === "failed" ? "error" : "success"
+              }`}
+            >
+              <p>{pipelineStatusText}</p>
+              {pipelineWarnings.length > 1 && pipelineResult.status !== "failed" && (
+                <ul className="status-message__warnings">
+                  {pipelineWarnings.map((warning, idx) => (
+                    <li key={idx}>{warning}</li>
+                  ))}
+                </ul>
+              )}
+              {pipelineResult.preview_url && pipelineResult.status !== "failed" && (
+                <img
+                  src={pipelineResult.preview_url}
+                  alt="AI 결과물"
+                  className="result-image"
+                />
+              )}
             </div>
-          </form>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+          )}
+        </div>
+      </form>
+      {isLoading && (
+        <div className="global-loader-overlay" role="status" aria-live="polite">
+          <div className="global-loader">
+            <div className="global-loader__spinner" aria-hidden="true" />
+            <div className="global-loader__text">
+              <p className="global-loader__title">{variationCountText}</p>
+              <p className="global-loader__note">조금만 기다리시면 결과가 나타납니다.</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </motion.div>
+  </motion.div>
+</AnimatePresence>
   );
 }
 

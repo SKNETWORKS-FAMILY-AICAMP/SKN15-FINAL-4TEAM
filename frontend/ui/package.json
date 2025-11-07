@@ -7,7 +7,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
-    "axios": "^1.13.1",
+    "axios": "^1.6.8",
     "framer-motion": "^12.23.24",
     "papaparse": "^5.5.3",
     "react": "^19.2.0",

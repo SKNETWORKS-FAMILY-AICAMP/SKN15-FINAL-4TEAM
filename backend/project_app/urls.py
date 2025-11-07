@@ -3,6 +3,9 @@ from django.urls import path
 from .views import (
     register,
     login,
+    health_check,
+    user_profile,
+    change_password,
     create_project,
     list_projects,
     list_project_ai_images,
@@ -21,13 +24,16 @@ urlpatterns = [
     # ✅ 회원가입 & 로그인
     path('register/', register, name='register'),
     path('login/', login, name='login'),
+    path('health/', health_check, name='health'),
+    path('users/<str:user_id>/', user_profile, name='user-profile'),
+    path('users/<str:user_id>/change-password/', change_password, name='change-password'),
 
     # ✅ 프로젝트 관련
     path('projects/create/', create_project, name='project-create'),
-    path('projects/<str:project_id>/status/', update_project_status, name='project-status-update'),
+    path('projects/<str:user_id>/', list_projects, name='project-list'),
+    path('projects/<str:project_id>/update/', update_project_status, name='project-update'),
     path('projects/<str:project_id>/ai-images/', list_project_ai_images, name='project-ai-images'),
     path('projects/<str:project_id>/ai-images/<int:image_id>/refine/', refine_project_image, name='project-ai-image-refine'),
-    path('projects/<str:user_id>/', list_projects, name='project-list'),
 
     # ✅ 통계
     path('projects/<str:user_id>/stats/', ProjectStatsView.as_view(), name='project-stats'),

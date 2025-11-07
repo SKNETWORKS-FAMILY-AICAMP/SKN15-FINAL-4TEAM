@@ -1,15 +1,14 @@
 import { Navigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 
 function ProtectedRoute({ children }) {
-  const { isAuthenticated } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const [redirect, setRedirect] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    const userId = localStorage.getItem("user_id"); // ✅ 로그인 유지 확인
+    if (!userId) {
       setShowModal(true);
       const timer = setTimeout(() => {
         setShowModal(false);
@@ -17,13 +16,14 @@ function ProtectedRoute({ children }) {
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [isAuthenticated]);
+  }, []);
 
   if (redirect) {
     return <Navigate to="/login" replace />;
   }
 
-  if (!isAuthenticated) {
+  const userId = localStorage.getItem("user_id");
+  if (!userId) {
     return (
       <AnimatePresence>
         {showModal && (
@@ -47,10 +47,7 @@ function ProtectedRoute({ children }) {
           >
             <motion.div
               style={{
-                background: "rgba(255, 255, 255, 0.05)",
-                backdropFilter: "blur(20px)",
-                WebkitBackdropFilter: "blur(20px)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
+                background: "#fff",
                 padding: "50px 60px",
                 borderRadius: "25px",
                 boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
@@ -68,24 +65,21 @@ function ProtectedRoute({ children }) {
                   height: "80px",
                   margin: "0 auto 25px",
                   borderRadius: "50%",
-                  background: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
+                  background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontSize: "2.5em",
-                  fontWeight: 900,
-                  color: "#fff",
                 }}
                 animate={{ rotate: [0, 10, -10, 0] }}
                 transition={{ duration: 0.5, repeat: 2 }}
               >
-                A
+                <i className="fas fa-lock" style={{ fontSize: "2.5em", color: "#fff" }}></i>
               </motion.div>
               <h2
                 style={{
                   fontSize: "2rem",
                   fontWeight: 700,
-                  color: "#fff",
+                  color: "#333",
                   marginBottom: "15px",
                 }}
               >
@@ -94,7 +88,7 @@ function ProtectedRoute({ children }) {
               <p
                 style={{
                   fontSize: "1.1rem",
-                  color: "rgba(255, 255, 255, 0.7)",
+                  color: "#6c757d",
                   marginBottom: "0",
                 }}
               >

@@ -108,6 +108,7 @@ class AiMakeImage(models.Model):
     image_id = models.IntegerField(primary_key=True, db_column="image_id")
     ai_image_path = models.TextField(blank=True, null=True)
     is_selected = models.CharField(max_length=1, blank=True, null=True)
+    source_image_id = models.IntegerField(blank=True, null=True, db_column="source_image_id")
 
     class Meta:
         db_table = "ai_make_image"
@@ -115,4 +116,3 @@ class AiMakeImage(models.Model):
 
     def __str__(self):
         return f"AI 이미지 {self.image_id}"
-

@@ -129,12 +129,13 @@ function Navbar() {
                   <motion.div
                     style={{
                       position: "absolute",
-                      bottom: "-2px",
-                      left: "50%",
-                      transform: "translateX(-50%)",
+                      bottom: -6,
+                      left: 0,
+                      right: 0,
+                      margin: "0 auto",
                       width: "60%",
-                      height: "3px",
-                      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                      height: 3,
+                      background: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
                       borderRadius: "2px",
                     }}
                     layoutId="activeIndicator"
@@ -150,8 +151,30 @@ function Navbar() {
       {isAuthenticated ? (
         <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
           <span style={{ fontSize: "0.95rem", color: "rgba(255, 255, 255, 0.8)", fontWeight: 500 }}>
-            {user?.username}님
+            {(user?.name || user?.user_id || "사용자") + "님"}
           </span>
+          <Link to="/mypage" style={{ textDecoration: "none" }}>
+            <motion.button
+              style={{
+                padding: "10px 24px",
+                borderRadius: "12px",
+                background: "transparent",
+                border: "1px solid rgba(255, 255, 255, 0.4)",
+                color: "#fff",
+                fontSize: "0.95rem",
+                fontWeight: 600,
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+              }}
+              whileHover={{
+                scale: 1.05,
+                background: "rgba(255, 255, 255, 0.1)",
+              }}
+              whileTap={{ scale: 0.95 }}
+            >
+              My Page
+            </motion.button>
+          </Link>
           <motion.button
             onClick={handleLogout}
             style={{

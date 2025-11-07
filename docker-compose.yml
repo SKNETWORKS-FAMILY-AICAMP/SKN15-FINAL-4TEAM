@@ -28,7 +28,7 @@ services:
       - hanssem-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/api/"]
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api/health/"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -1,6 +1,4 @@
 import { motion } from "framer-motion";
-import AssembleLogo from "../components/AssembleLogo";
-import Footer from "./Footer";
 import "../App.css";
 
 function AboutPage() {
@@ -32,19 +30,10 @@ function AboutPage() {
     >
       {/* Hero Section */}
       <motion.section
+        className="page-hero"
         style={{
-          position: "relative",
-          height: "70vh",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "flex-start",
-          padding: "0 80px",
-          background: "linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2000&auto=format&fit=crop') center/cover no-repeat",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          color: "#fff",
-          marginTop: "0",
+          background:
+            "linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2000&auto=format&fit=crop') center/cover no-repeat",
         }}
         initial="hidden"
         animate="visible"
@@ -428,9 +417,6 @@ function AboutPage() {
           </motion.div>
         </motion.div>
       </motion.section>
-
-      {/* Footer */}
-      <Footer />
     </main>
   );
 }

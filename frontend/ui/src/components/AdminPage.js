@@ -1,11 +1,32 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import "../App.css";
 
+const formatDate = (value) => {
+  if (!value) return "-";
+  try {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return value;
+    }
+    return parsed.toLocaleDateString("ko-KR");
+  } catch {
+    return value;
+  }
+};
+
 function AdminPage() {
-  const { isAdmin, getPendingUsers, getAllUsers, approveUser, rejectUser, deleteUser } = useAuth();
+  const {
+    isAdmin,
+    fetchPendingUsers,
+    fetchAllUsers,
+    approvePendingUser,
+    rejectPendingUser,
+    deletePendingRequest,
+    deleteUserAccount,
+  } = useAuth();
   const navigate = useNavigate();
   const [pendingUsers, setPendingUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
@@ -35,60 +56,112 @@ function AdminPage() {
     }
   }, [isAdmin, navigate]);
 
-  // 사용자 목록 로드
+  const loadUsers = useCallback(async () => {
+    if (!isAdmin) return;
+
+    try {
+      const [pendingList, userList] = await Promise.all([
+        fetchPendingUsers?.("pending") ?? [],
+        fetchAllUsers?.() ?? [],
+      ]);
+
+      setPendingUsers(Array.isArray(pendingList) ? pendingList : []);
+      setAllUsers(Array.isArray(userList) ? userList : []);
+    } catch (error) {
+      console.error("관리자 데이터 로드 실패:", error);
+      alert("관리자 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
+    }
+  }, [fetchAllUsers, fetchPendingUsers, isAdmin]);
+
   useEffect(() => {
-    loadUsers();
-  }, []);
+    if (isAdmin) {
+      loadUsers();
+    }
+  }, [isAdmin, loadUsers]);
 
-  const loadUsers = () => {
-    setPendingUsers(getPendingUsers());
-    setAllUsers(getAllUsers());
-  };
+  const handleApprovePending = async (pendingUser) => {
+    if (!pendingUser) return;
+    const pendingId = pendingUser.user_id || pendingUser.username;
+    if (!window.confirm(`${pendingId} 사용자를 승인하시겠습니까?`)) return;
 
-  const handleApprove = (username) => {
-    if (window.confirm(`${username} 사용자를 승인하시겠습니까?`)) {
-      if (approveUser(username)) {
-        alert("승인되었습니다.");
-        loadUsers();
-      } else {
-        alert("승인 실패");
-      }
+    try {
+      await approvePendingUser?.(pendingUser.id);
+      alert("승인되었습니다.");
+      loadUsers();
+    } catch (error) {
+      console.error("승인 실패:", error);
+      alert("승인 중 오류가 발생했습니다.");
     }
   };
 
-  const handleReject = (username) => {
-    if (window.confirm(`${username} 사용자를 거부하시겠습니까?`)) {
-      if (rejectUser(username)) {
-        alert("거부되었습니다.");
-        loadUsers();
-      } else {
-        alert("거부 실패");
-      }
+  const handleRejectPending = async (pendingUser) => {
+    if (!pendingUser) return;
+    const pendingId = pendingUser.user_id || pendingUser.username;
+    if (!window.confirm(`${pendingId} 사용자를 거부하시겠습니까?`)) return;
+
+    const reason = window.prompt("거절 사유를 입력해주세요 (선택 입력)", pendingUser.rejected_reason || "");
+
+    try {
+      await rejectPendingUser?.(pendingUser.id, reason || null);
+      alert("거부되었습니다.");
+      loadUsers();
+    } catch (error) {
+      console.error("거부 실패:", error);
+      alert("거부 처리 중 오류가 발생했습니다.");
     }
   };
 
-  const handleDelete = (username) => {
-    if (window.confirm(`${username} 사용자를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
-      const result = deleteUser(username);
-      if (result.success) {
-        alert("사용자가 삭제되었습니다.");
-        loadUsers();
-      } else if (result.error === "cannotDeleteAdmin") {
-        alert("관리자 계정은 삭제할 수 없습니다.");
-      } else {
-        alert("삭제 실패");
-      }
+  const handleDeletePending = async (pendingUser) => {
+    if (!pendingUser) return;
+    const pendingId = pendingUser.user_id || pendingUser.username;
+    if (!window.confirm(`${pendingId} 사용자의 요청을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+      return;
+    }
+
+    try {
+      await deletePendingRequest?.(pendingUser.id);
+      alert("가입 요청을 삭제했습니다.");
+      loadUsers();
+    } catch (error) {
+      console.error("가입 요청 삭제 실패:", error);
+      alert("요청 삭제 중 오류가 발생했습니다.");
+    }
+  };
+
+  const handleDeleteUser = async (user) => {
+    if (!user) return;
+    const targetId = user.user_id || user.username;
+    if (targetId === "admin") {
+      alert("관리자 계정은 삭제할 수 없습니다.");
+      return;
+    }
+
+    if (!window.confirm(`${targetId} 사용자를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+      return;
+    }
+
+    try {
+      await deleteUserAccount?.(targetId);
+      alert("사용자가 삭제되었습니다.");
+      loadUsers();
+    } catch (error) {
+      console.error("사용자 삭제 실패:", error);
+      alert("사용자 삭제 중 오류가 발생했습니다.");
     }
   };
 
   const getStatusBadge = (status) => {
+    const normalized = (status || "").toString().toLowerCase();
     const statusStyles = {
       pending: { bg: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)", label: "승인 대기" },
-      approved: { bg: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)", label: "승인됨" },
-      rejected: { bg: "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)", label: "거부됨" },
+      approved: { bg: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)", label: "승인됨" },
+      rejected: { bg: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)", label: "거부됨" },
     };
 
-    const style = statusStyles[status] || statusStyles.pending;
+    const style = statusStyles[normalized] || {
+      bg: "linear-gradient(135deg, #9ca3af 0%, #b8bfc9 100%)",
+      label: normalized ? normalized.toUpperCase() : "미확인",
+    };
 
     return (
       <span
@@ -205,7 +278,6 @@ function AdminPage() {
             onClick={() => setActiveTab("pending")}
             style={{
               padding: "12px 30px",
-              border: "none",
               borderRadius: "15px",
               fontSize: "1.1rem",
               fontWeight: 700,
@@ -231,7 +303,6 @@ function AdminPage() {
             onClick={() => setActiveTab("all")}
             style={{
               padding: "12px 30px",
-              border: "none",
               borderRadius: "15px",
               fontSize: "1.1rem",
               fontWeight: 700,
@@ -327,18 +398,18 @@ function AdminPage() {
                         whileHover={{ backgroundColor: "rgba(255, 255, 255, 0.05)" }}
                       >
                         <td style={{ padding: "20px 15px", fontSize: "1rem", fontWeight: 600, color: "#fff" }}>
-                          {user.username}
+                          {user.user_id || user.username}
                         </td>
                         <td style={{ padding: "20px 15px", fontSize: "0.95rem", color: "rgba(255, 255, 255, 0.7)" }}>
                           {user.email}
                         </td>
                         <td style={{ padding: "20px 15px", fontSize: "0.95rem", color: "rgba(255, 255, 255, 0.7)" }}>
-                          {new Date(user.registeredAt).toLocaleDateString("ko-KR")}
+                          {formatDate(user.created_at || user.registeredAt)}
                         </td>
                         <td style={{ padding: "20px 15px", textAlign: "center" }}>
                           <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
                             <motion.button
-                              onClick={() => handleApprove(user.username)}
+                              onClick={() => handleApprovePending(user)}
                               style={{
                                 padding: "8px 20px",
                                 border: "none",
@@ -357,7 +428,7 @@ function AdminPage() {
                             </motion.button>
 
                             <motion.button
-                              onClick={() => handleReject(user.username)}
+                              onClick={() => handleRejectPending(user)}
                               style={{
                                 padding: "8px 20px",
                                 border: "none",
@@ -376,7 +447,7 @@ function AdminPage() {
                             </motion.button>
 
                             <motion.button
-                              onClick={() => handleDelete(user.username)}
+                              onClick={() => handleDeletePending(user)}
                               style={{
                                 padding: "8px 20px",
                                 border: "none",
@@ -459,38 +530,40 @@ function AdminPage() {
                       whileHover={{ backgroundColor: "rgba(255, 255, 255, 0.05)" }}
                     >
                       <td style={{ padding: "20px 15px", fontSize: "1rem", fontWeight: 600, color: "#fff" }}>
-                        {user.username}
+                        {user.user_id || user.username}
                       </td>
                       <td style={{ padding: "20px 15px", fontSize: "0.95rem", color: "rgba(255, 255, 255, 0.7)" }}>
                         {user.email}
                       </td>
                       <td style={{ padding: "20px 15px" }}>{getStatusBadge(user.status)}</td>
                       <td style={{ padding: "20px 15px", fontSize: "0.95rem", color: "rgba(255, 255, 255, 0.7)" }}>
-                        {new Date(user.registeredAt).toLocaleDateString("ko-KR")}
+                        {formatDate(user.created_at || user.registeredAt)}
                       </td>
                       <td style={{ padding: "20px 15px", fontSize: "0.95rem", color: "rgba(255, 255, 255, 0.7)" }}>
-                        {user.approvedAt ? new Date(user.approvedAt).toLocaleDateString("ko-KR") : "-"}
+                        {user.approved_at ? formatDate(user.approved_at) : user.approvedAt ? formatDate(user.approvedAt) : "-"}
                       </td>
                       <td style={{ padding: "20px 15px", textAlign: "center" }}>
                         <motion.button
-                          onClick={() => handleDelete(user.username)}
-                          disabled={user.username === "admin"}
+                          onClick={() => handleDeleteUser(user)}
+                          disabled={(user.user_id || user.username) === "admin"}
                           style={{
-                            padding: "8px 20px",
+                            padding: "10px 24px",
                             border: "none",
-                            borderRadius: "10px",
-                            background: user.username === "admin"
-                              ? "rgba(255, 255, 255, 0.1)"
-                              : "rgba(255, 255, 255, 0.1)",
+                            borderRadius: "12px",
+                            background:
+                              (user.user_id || user.username) === "admin"
+                                ? "rgba(255, 255, 255, 0.1)"
+                                : "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)",
                             color: "#fff",
-                            fontSize: "0.9rem",
+                            fontSize: "0.95rem",
                             fontWeight: 600,
-                            cursor: user.username === "admin" ? "not-allowed" : "pointer",
-                            boxShadow: "0 4px 10px rgba(0, 0, 0, 0.3)",
-                            opacity: user.username === "admin" ? 0.5 : 1,
+                            cursor: (user.user_id || user.username) === "admin" ? "not-allowed" : "pointer",
+                            boxShadow: "0 4px 15px rgba(255, 107, 53, 0.3)",
+                            opacity: (user.user_id || user.username) === "admin" ? 0.5 : 1,
+                            transition: "all 0.3s ease",
                           }}
-                          whileHover={user.username !== "admin" ? { scale: 1.05 } : {}}
-                          whileTap={user.username !== "admin" ? { scale: 0.95 } : {}}
+                          whileHover={(user.user_id || user.username) !== "admin" ? { scale: 1.05 } : {}}
+                          whileTap={(user.user_id || user.username) !== "admin" ? { scale: 0.95 } : {}}
                         >
                           삭제
                         </motion.button>

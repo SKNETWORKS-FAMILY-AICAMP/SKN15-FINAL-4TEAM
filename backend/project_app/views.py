@@ -130,6 +130,98 @@ def login(request):
     }, status=status.HTTP_200_OK)
 
 
+@api_view(["GET"])
+def health_check(request):
+    return Response({"status": "ok"}, status=status.HTTP_200_OK)
+
+
+@api_view(["GET", "PATCH"])
+def user_profile(request, user_id):
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT user_id, name, user_permission_code FROM users WHERE user_id = %s",
+            [user_id],
+        )
+        row = cursor.fetchone()
+
+    if not row:
+        return Response({"error": "사용자를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == "GET":
+        return Response(
+            {
+                "user_id": row[0],
+                "name": row[1],
+                "role": row[2],
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    new_name = request.data.get("name")
+    if not new_name:
+        return Response({"error": "변경할 이름을 입력해 주세요."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "UPDATE users SET name = %s WHERE user_id = %s",
+                [new_name, user_id],
+            )
+    except Exception as exc:
+        logger.error("사용자 이름 업데이트 실패: %s", exc)
+        return Response({"error": "이름을 업데이트하지 못했습니다."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    return Response(
+        {
+            "message": "프로필이 업데이트되었습니다.",
+            "user_id": user_id,
+            "name": new_name,
+            "role": row[2],
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(["POST"])
+def change_password(request, user_id):
+    current_password = request.data.get("current_password")
+    new_password = request.data.get("new_password")
+    confirm_password = request.data.get("confirm_password")
+
+    if not all([current_password, new_password, confirm_password]):
+        return Response({"error": "현재 비밀번호와 새 비밀번호를 모두 입력해 주세요."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if new_password != confirm_password:
+        return Response({"error": "새 비밀번호가 일치하지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+    hashed_current = hash_password(current_password)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT password FROM users WHERE user_id = %s",
+            [user_id],
+        )
+        row = cursor.fetchone()
+
+    if not row or row[0] != hashed_current:
+        return Response({"error": "현재 비밀번호가 올바르지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if current_password == new_password:
+        return Response({"error": "새 비밀번호는 현재 비밀번호와 달라야 합니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+    hashed_new = hash_password(new_password)
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "UPDATE users SET password = %s WHERE user_id = %s",
+                [hashed_new, user_id],
+            )
+    except Exception as exc:
+        logger.error("비밀번호 변경 실패: %s", exc)
+        return Response({"error": "비밀번호를 변경하지 못했습니다."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    return Response({"message": "비밀번호가 변경되었습니다."}, status=status.HTTP_200_OK)
+
+
 @api_view(['POST'])
 @parser_classes([MultiPartParser, FormParser])
 def create_project(request):
@@ -226,6 +318,16 @@ def create_project(request):
     pipeline_payload = {"status": "skipped", "reason": "이미지가 제공되지 않았습니다.", "images": []}
     temp_source_path = None
 
+    def _resolve_variations():
+        variation_field = (
+            data.get("image_variations") or data.get("variations") or data.get("variation_count")
+        )
+        try:
+            value = int(variation_field)
+        except (TypeError, ValueError):
+            value = 3
+        return max(1, min(9, value))
+
     if image_bytes:
         try:
             with tempfile.NamedTemporaryFile(suffix=f".{image_ext}", delete=False) as temp_file:
@@ -238,11 +340,7 @@ def create_project(request):
             except ImproperlyConfigured as exc:
                 raise PipelineStepError(str(exc)) from exc
 
-            variation_count = data.get("image_variations") or data.get("variations") or data.get("variation_count")
-            try:
-                variations = int(variation_count) if variation_count is not None else 9
-            except (TypeError, ValueError):
-                variations = 9
+            variations = _resolve_variations()
 
             pipeline_images = run_design_pipeline(
                 temp_source_path,
@@ -404,10 +502,17 @@ def refine_project_image(request, project_id, image_id):
         next_image_id = cursor.fetchone()[0]
         cursor.execute(
             """
-            INSERT INTO ai_make_image (image_id, project_id, req_id, ai_image_path, is_selected)
-            VALUES (%s, %s, %s, %s, %s);
+            INSERT INTO ai_make_image (
+                image_id,
+                project_id,
+                req_id,
+                ai_image_path,
+                is_selected,
+                source_image_id
+            )
+            VALUES (%s, %s, %s, %s, %s, %s);
             """,
-            [next_image_id, project_id, target_image.req_id, image_url, "N"],
+            [next_image_id, project_id, target_image.req_id, image_url, "N", image_id],
         )
 
     return Response(
@@ -493,6 +598,7 @@ def list_project_ai_images(request, project_id):
                 "req_id": getattr(req, "req_id", None),
                 "image_url": image.ai_image_path,
                 "is_selected": (image.is_selected or "").upper() == "Y",
+                "source_image_id": getattr(image, "source_image_id", None),
                 "design_style": getattr(req, "design_style", None),
                 "residence_type": getattr(req, "residence_type", None),
                 "space_type": getattr(req, "space_type", None),
@@ -540,6 +646,7 @@ class ProjectStatsView(APIView):
         total_projects = projects.count()
         in_progress = projects.filter(status="progress").count()
         completed = projects.filter(status="completed").count()
+        total_designs = AiMakeImage.objects.filter(project__user_id=user_id).count()
 
         now = timezone.now()
         last_month = now - timedelta(days=30)
@@ -550,6 +657,7 @@ class ProjectStatsView(APIView):
             "in_progress": in_progress,
             "completed": completed,
             "recent_increase": created_recently,
+            "total_designs": total_designs,
         }
         return Response(data, status=status.HTTP_200_OK)
 
