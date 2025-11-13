@@ -1,94 +1,116 @@
 # 🏠 ASSEMBLE: AI 인테리어 디자이너
 
-> **SK Networks Family AI CAMP 15기 – 4팀 Goodfellow**
->
-> 한샘 인테리어 디자이너를 위한 **AI 기반 맞춤형 디자인 컨설팅 솔루션**
+> **SK Networks Family AI CAMP 15기 – 4팀 Goodfellow**  
+> 한샘 인테리어 컨설팅 프로세스를 자동화하는 **AI 기반 시안 생성 솔루션**
 
 ---
 
 ## 🔰 프로젝트 개요
 
-고객이 제공한 요구사항과 방 이미지를 기반으로
-AI가 **맞춤형 인테리어 시안을 자동 생성**하는 B2B형 솔루션입니다.
-한샘의 공식 시공사례와 자재 데이터를 학습한 모델을 통해
-디자이너의 초안 설계 시간을 단축하고, 고객 커뮤니케이션을 강화합니다.
+**ASSEMBLE**은  
+사용자가 입력한 **요구사항(Text)** 과 **방 이미지(Image)** 를 기반으로
 
-> “AI가 제안하고, 디자이너가 완성한다.”
+- **SLLM 기반 인테리어 설명 생성**
+- **OpenAI Image Edit 기반 빈 방 생성 / Object Removal**
+- **요구사항 반영 Image-to-Image 변환**
+- **한샘 가구 추천 및 가격·URL 매칭**
+
+까지 수행하는 **엔드-투-엔드 인테리어 생성·추천 시스템**입니다.
+
+> “AI가 초안을 만들고, 디자이너가 완성한다.”
 
 ---
 
 ## 🧭 문제 정의
 
-| 문제            | 기존 방식의 한계                                  |
-| ------------- | ------------------------------------------ |
-| 반복적인 시안 탐색    | 고객 요구에 맞는 레퍼런스 이미지를 수동 탐색                  |
-| 감성 표현 해석의 어려움 | “따뜻한 분위기”, “고급스러운 느낌” 등의 모호한 표현을 고객 맞춤으로 한 번에 시각화하기 어려움 |
-| 시간·비용 낭비      | 스케치·시안 작성에 많은 리소스 소요                       |
-| 전문성 저하        | 반복 작업으로 디자이너 본연의 컨설팅 업무 감소                 |
+한샘을 포함한 대부분의 인테리어 상담 과정에는 다음과 같은 병목이 존재합니다.
 
-**ASSEMBLE**은 고객 요구를 텍스트와 이미지로 입력받아
-AI가 즉각적으로 초안을 제시함으로써 이러한 비효율을 해소합니다.
+| 문제                    | 기존 방식의 한계                                                |
+| ----------------------- | --------------------------------------------------------------- |
+| 이미지 기반 상담 난이도 | 고객이 제공하는 사진의 가구·구조 때문에 시안 제작 난이도가 높음 |
+| 반복된 초안 수정        | ‘따뜻한 느낌’, ‘모던한 분위기’ 등 모호한 표현 해석이 난해       |
+| 초기 시안 제작 부담     | 디자이너가 초안을 직접 제작하기 때문에 시간이 오래 걸림         |
+| 가구 추천 비효율        | 고객 취향·예산 기반 가구 매칭이 반복 작업                       |
+
+**ASSEMBLE**은 이 병목을 자동화하여  
+디자이너의 **초기 시안 제작 시간을 크게 단축**하는 데 목적이 있습니다.
 
 ---
 
 ## 💡 주요 기능
 
-| 구분                        | 기능 요약                               |
-| ------------------------- | ----------------------------------- |
-| 🗨️ **요구사항 입력**           | 주거 유형, 공간, 스타일, 예산 등 고객 요구 입력       |
-| 🪑 **Object Removal**     | 기존 방 사진에서 가구를 제거해 깨끗한 학습용 이미지 생성    |
-| 🧠 **SLLM 텍스트 컨설팅**       | 고객 요구를 바탕으로 상세한 인테리어 컨설팅 텍스트 생성     |
-| 🏗️ **Image-to-Image 생성** | 빈 방 이미지와 프롬프트를 입력받아 완성된 인테리어 이미지 생성 |
-| 📊 **AI 시안 관리 대시보드**      | 프로젝트별 생성 이력·결과 관리                   |
-| 🪪 **한샘 가구 연동**           | ChatGPT + Naver API로 실제 가구 제품 추천    |
+| 기능                                    | 설명                                                       |
+| --------------------------------------- | ---------------------------------------------------------- |
+| **방 이미지 분류(Classification)**      | 입력 이미지를 분석해 방/비방, 빈방 여부 자동 판별          |
+| **Object Removal / 빈방 생성 (OpenAI)** | OpenAI Image Edit(API)를 활용해 기존 방 사진에서 가구 제거 |
+| **SLLM Multi-task**                     | 인테리어 설명, 이미지 프롬프트, 가구 리스트를 한 번에 생성 |
+| **요구사항 기반 재생성(Feedback Loop)** | 이전 출력물 + 추가 요청을 반영해 재생성                    |
+| **한샘 Web Scraper 연동**               | 추천된 가구명을 기반으로 가격·URL 자동 수집                |
+| **Complete Pipeline**                   | 텍스트 → 이미지 → 가구 추천까지 단일 파이프라인 구성       |
 
 ---
+## 👥 팀 구성 (Goodfellow)  
 
+| 권주연 | 강민정 | 기현택 | 정민철 | 임경원 |
+|--------|--------|--------|--------|--------|
+| <img src="./images/juyeon.png" width="90"/> | <img src="./images/minjung.png" width="90"/> | <img src="./images/hyuntaek.png" width="90"/> | <img src="./images/mincheol.png" width="90"/> | <img src="./images/kyungwon.png" width="90"/> |
+| **PM & SLLM Engineer** | **UNet / Preprocessing Engineer** | **Backend & Partial Frontend** | **Image AI & DB Engineer** | **Frontend & AWS Infra** |
+| • 프로젝트 총괄/기획<br>• SLLM 파이프라인<br>• Classification 설계 | • UNet 빈방모델 학습<br>• 이미지 전처리/마스킹<br>• 데이터 제작·정제 | • FastAPI 백엔드<br>• DB 연동/REST API<br>• 프론트 일부 기능 | • NanoBanana 이미지 생성<br>• Object Removal 연동<br>• DB 설계/QA | • Next.js UI/UX<br>• FastAPI 연동<br>• AWS 인프라/배포 |
+
+
+
+---
 ## 🧱 시스템 아키텍처
 
 ### ⚙️ 전체 구조
 
-```text
-Frontend (React/Next.js)
+```
+Frontend (Next.js + React)
      ↓
-FastAPI (AWS EC2)
+FastAPI Backend (AWS EC2)
      ↓
 LangGraph Orchestrator
- ├─ sLLM (RunPod)
- │    └─ Text-based Interior Consulting
- ├─ Image-to-Image Model (RunPod)
- │    └─ FLUX / Stable Diffusion 기반
- ├─ ChatGPT + Naver API (가구 추천)
- ├─ PostgreSQL (Amazon RDS)
- └─ S3 (생성 이미지 저장)
+     ↓
+Classification Model (RunPod)
+ └─ 입력 이미지의 방 여부·빈방 여부 판별
+     ↓
+sLLM (RunPod)
+ ├─ 사용자 요구사항 기반 인테리어 설명 생성
+ ├─ 이미지 모델용 텍스트 프롬프트 생성
+ └─ 추천 가구 목록 생성
+     ↓
+Image Model (RunPod, FLUX / Stable Diffusion)
+ ├─ 빈 방 생성(Object Removal 결과 기반)
+ └─ 요구사항 반영 인테리어 이미지 생성
+     ↓
+Web Scraper (ChatGPT + Naver API)
+ └─ 한샘 가구 이미지·가격·URL 수집
+     ↓
+PostgreSQL (Amazon RDS)
+ └─ 프로젝트 / 생성 결과 / 사용자 로그 저장
+     ↓
+Amazon S3
+ └─ 생성 이미지 저장
 ```
 
-### 🧩 배포 구성 (AWS)
+### 🔵 Primary Flow (Black Line)
 
-* EC2 (FastAPI, Nginx, Gunicorn)
-* RDS (PostgreSQL)
-* S3 (이미지 저장소)
-* Route53 + ACM (HTTPS)
-* Amplify (Frontend)
-* Cognito (로그인/인증)
+초기 입력 → 방 여부 분류 → (필요 시) Object Removal → 1차 및 최종 이미지 생성
 
-> CI/CD 자동화:
-> GitHub → Docker Build → EC2 Deploy
-> Frontend → Amplify 자동 배포
+### 🟢 Feedback Flow (Green Line)
+
+사용자 불만족 → 추가 요구사항 입력 → 재생성
 
 ---
 
 ## 🧠 AI 모델 구성
 
-| 모델명                             | 역할                         | 입력                 | 출력              |
-| ------------------------------- | -------------------------- | ------------------ | --------------- |
-| **SLLM**                        | 고객 요구사항 기반 인테리어 컨설팅 텍스트 생성 | 요구 텍스트             | 스타일·가구·색상 기반 설명 |
-| **Image-to-Image (FLUX)**       | 인테리어 시안 이미지 생성             | 빈 방 이미지 + 텍스트 프롬프트 | 완성 이미지          |
-| **Object Removal / Inpainting** | 방 사진에서 가구 제거               | 원본 이미지             | 가구 제거된 빈 공간 이미지 |
-| **Room Classification** | 사용자 이미지를 기반으로 방(실내 공간) 여부를 자동 분류 | 입력 이미지 | 분류 결과 |
-
-> SLLM 결과 텍스트 → Image Model 프롬프트로 연계되어
-> “텍스트 → 이미지”의 완전한 생성 파이프라인을 구성합니다.
+| 모델명                                           | 역할                           | 입력                    | 출력                          |
+| ------------------------------------------------ | ------------------------------ | ----------------------- | ----------------------------- |
+| **Classification Model**                         | 방 여부, 빈 방 여부 판별       | 이미지                  | Yes/No                        |
+| **OpenAI Image Edit (gpt-image-1)**              | 기존 방 → 빈 방 이미지 생성    | 원본 이미지 + 마스크    | Clean Room Image              |
+| **Image Model (NanoBanana / 또는 OpenAI Image)** | 인테리어 시안 이미지 생성      | 빈 방 이미지 + 프롬프트 | 인테리어 시안                 |
+| **SLLM (Multi-task)**                            | 설명·프롬프트·가구목록 생성    | 요구 텍스트             | 설명 + 프롬프트 + 가구 리스트 |
 
 ---
 
@@ -96,111 +118,93 @@ LangGraph Orchestrator
 
 ### 1️⃣ 데이터 수집
 
-* **출처:** 한샘 공식 홈페이지 / 블로그 / 뉴스 / RISS 논문
-* **형태:** 가구, 인테리어, 시공사례, 뉴스·블로그, 논문
-* **수집도구:** Python, BeautifulSoup, Selenium
-* **자동화:** 매일 새벽 스케줄링, 실패 시 재수집 로직
+- 한샘 공식 시공사례 이미지·텍스트
+- 블로그·뉴스·NLP 자료
+- 가구 데이터 (명칭/설명/가격)
 
 ### 2️⃣ 데이터 전처리
 
-* **텍스트 정제:** 특수문자, HTML 태그, 중복 문장 제거
-* **범주형 코드화:** `spa_XXXX`, `sty_XXXX`, `cos_XXXX`
-* **노이즈 필터링:** 10자 이하 문장, “시공 전”, “철거” 등 제거
-* **데이터 병합:** 시공사례와 텍스트 매핑
-* **데이터 분할:** Train 80% / Validation 10% / Test 10%
+- HTML, 특수문자 제거
+- 스타일/소재 코드화 (`spa_`, `sty_`, `mat_`…)
+- 시공사례 – 텍스트 매핑
+- Train/Val/Test (8:1:1)
 
-### 3️⃣ 데이터 저장
+### 3️⃣ 저장
 
-* AWS S3 (CSV, JSON)
-* PostgreSQL + pgvector
-  → LangChain 연동을 통한 의미 기반 검색 지원
-
----
-
-## 💾 데이터베이스 설계 요약
-
-| 주요 테이블                                | 설명                |
-| ------------------------------------- | ----------------- |
-| `Users`                               | 디자이너 계정 정보        |
-| `Projects`                            | 프로젝트별 생성 시안 관리    |
-| `Customer_req`                        | 고객 요구사항 저장        |
-| `Ai_make_image`                       | 생성 이미지 경로 및 선택 여부 |
-| `Furniture`, `Interior`               | 가구·인테리어 메타데이터     |
-| `Built_case`, `Built_contents`        | 시공사례 텍스트 및 이미지 매핑 |
-| `User_log`                            | 사용자 활동 로그         |
-| `Category`, `Thesis`, `News`, `Blogs` | 크롤링 데이터 원본        |
-
-> 모든 관계는 1:N 중심 구조로 설계되어
-> **프로젝트 단위 관리 + AI 결과 추적**이 가능하도록 구성됨.
+- **AWS S3**: 이미지/CSV/JSON
+- **PostgreSQL (RDS)**
+- **pgvector** 기반 의미 검색
 
 ---
 
-## 💻 화면 설계 주요 흐름
+## 💾 DB 구조 요약
 
-| 구분        | 화면 ID         | 주요 기능                         |
-| --------- | ------------- | ----------------------------- |
-| 랜딩 페이지    | SC-01-001     | 서비스 소개 / 로그인 이동               |
-| 로그인·회원가입  | SC-01-002     | Cognito 관리자 계정 기반 로그인         |
-| 프로젝트 관리   | SC-01-003     | My Projects / 생성 / 수정 / 결과 확인 |
-| 요구사항 입력   | SC-01-005     | 주거유형, 공간, 예산, 가족, 스타일 입력      |
-| 결과 페이지    | SC-01-006     | AI 생성 시안 3x3 뷰, 선택 및 수정       |
-| 리소스·라이브러리 | SC-01-008~009 | 한샘 자산 검색 / 가구 자료 열람           |
-| About Us  | SC-01-009     | 팀 및 서비스 소개                    |
+| 테이블                         | 설명                   |
+| ------------------------------ | ---------------------- |
+| `Users`                        | 디자이너/관리자 정보   |
+| `Projects`                     | 프로젝트 메타관리      |
+| `Customer_req`                 | 고객 요구 텍스트       |
+| `Ai_make_image`                | 생성 이미지 저장·선택  |
+| `Furniture`                    | 가구 메타데이터        |
+| `Built_case`, `Built_contents` | 시공사례 텍스트·이미지 |
+| `User_log`                     | 사용자 활동 로그       |
+
+---
+
+## 🎨 화면 흐름
+
+| 화면                  | 설명                            |
+| --------------------- | ------------------------------- |
+| **Landing**           | 서비스 소개                     |
+| **Login**             | Cognito 관리자 로그인           |
+| **Project 관리**      | 생성 시안 목록                  |
+| **Requirements 입력** | 요구사항 입력 폼                |
+| **AI 결과 페이지**    | 생성 이미지 3x3 뷰, 선택·재생성 |
+| **Resource Library**  | 한샘 자산 검색                  |
+| **About Us**          | 팀 소개                         |
 
 ---
 
 ## ⚙️ 기술 스택
 
-| 영역                  | 사용 기술                                             |
-| ------------------- | ------------------------------------------------- |
-| **Frontend**        | React.js, Next.js, Tailwind, AWS Amplify          |
-| **Backend**         | FastAPI, Nginx, Gunicorn, LangChain, LangGraph    |
-| **AI Models**       | PyTorch, Diffusers, RunPod, OpenAI API            |
-| **Database**        | PostgreSQL (pgvector), AWS RDS                    |
-| **Infra / CI/CD**   | Docker, GitHub Actions, AWS EC2, S3, Route53, ACM |
-| **ETL & Crawling**  | Python, BeautifulSoup, Selenium, Pandas           |
-| **Version Control** | Git, GitHub                                       |
+| 영역          | 기술                                                           |
+| ------------- | -------------------------------------------------------------- |
+| **Frontend**  | React, Next.js, Tailwind, AWS Amplify                          |
+| **Backend**   | FastAPI, LangChain, LangGraph, Nginx, Gunicorn                 |
+| **AI Models** | OpenAI API (GPT-4.1, GPT-Image-1), PyTorch, NanoBanana, RunPod |
+| **Infra**     | Docker, AWS EC2, S3, RDS, Route53, ACM                         |
+| **Data**      | PostgreSQL + pgvector                                          |
+| **Crawling**  | Selenium, BeautifulSoup, Pandas                                |
+| **DevOps**    | GitHub Actions (CI/CD)                                         |
 
 ---
 
-## 👥 팀 구성
+## 📊 프로젝트 결과
 
-| 역할                    | 이름      | 담당 업무                                     |
-| --------------------- | ------- | ----------------------------------------- |
-| 👩‍💼 PM & Backend    | **권주연** | PM, 프로젝트 총괄 및 기획                 |
-| 🧠 SLLM Engineer      | **강민정** | 프로젝트 기획, 데이터 생성, 문서 디자인                       |
-| 🧩 Image AI Engineer  | **기현택** | 문서 관리, 성능 평가 |
-| 💻 Frontend Developer | **임경원** | 데이터 수집, 모델링 설계          |
-| 🧾 Data Engineer & QA | **정민철** | 웹 서비스 및 기획, 모델링 설계             |
+### ✔ 구축 완료
 
----
+- 한샘 데이터 기반 텍스트+이미지 생성 파이프라인
+- 방 분류 → OpenAI Object Removal → 멀티스텝 이미지 생성
+- SLLM Multi-task → 이미지 프롬프트 자동 생성
+- 한샘 가구 추천 및 Web Scraping
+- AWS 기반 전체 배포 구성 완성
 
+### 🔄 향후 계획
 
----
-
-## 📊 결과 및 향후 계획
-
-* ✅ 한샘 공식 사례 기반 인테리어 텍스트·이미지 생성 파이프라인 구축
-* ✅ 벡터DB 기반 의미 검색 + 가구 추천 기능 완성
-* 🔄 **차후 계획**
-
-  * CLIPScore, SSIM 기반 생성 이미지 평가 자동화
-  * 사용자 피드백 루프 기반 모델 개선
-  * 실서비스용 Admin 대시보드 추가
-  * 추가 도메인 확장 (호텔, 상업공간 등)
+- CLIPScore, SSIM 기반 이미지 평가 자동화
+- 피드백 루프 기반 개선
+- 디자이너 워크플로우와 통합
+- 상업공간/오피스 도메인 확장
 
 ---
 
 ## 🪪 Repository Info
 
-* **Repository:** [SKNETWORKS-FAMILY-AICAMP/SKN15-FINAL-4TEAM](https://github.com/SKNETWORKS-FAMILY-AICAMP/SKN15-FINAL-4TEAM)
-* **Team:** Goodfellow (SKN AI CAMP 15기)
-* **Last Updated:** 2025.10
-* **Keywords:** `AI Interior Designer`, `SLLM`, `Image-to-Image`, `LangGraph`, `AWS`, `FastAPI`, `React`, `pgvector`
+- **Repository:** https://github.com/SKNETWORKS-FAMILY-AICAMP/SKN15-FINAL-4TEAM
+- **Team:** Goodfellow (SKN AI CAMP 15기)
+- **Last Updated:** 2025.11
+- **Keywords:** `AI Interior Designer`, `SLLM`, `OpenAI Image Edit`, `Image-to-Image`, `AWS`, `FastAPI`, `LangGraph`
 
 ---
 
-> **© 2025. Goodfellow Team — SK Networks Family AI CAMP 15기**
-> All rights reserved.
-
-
+> **© 2025 Goodfellow Team — SK Networks Family AI CAMP 15기**
