@@ -42,6 +42,7 @@ function ResultsPage() {
         spaceType: image.space_type,
         budgetRange: image.budget_range,
         familyType: image.family_type,
+        catalogFurnitures: image.catalog_furnitures || [],
       }));
 
       const sorted = [...mapped].sort((a, b) => {

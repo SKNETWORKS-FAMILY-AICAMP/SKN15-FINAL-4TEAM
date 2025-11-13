@@ -13,6 +13,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.exceptions import PermissionDenied
 from django.utils import timezone
 from datetime import datetime, timedelta
+from typing import Optional
 import hashlib
 import io
 import logging
@@ -29,6 +30,8 @@ from PIL import Image
 from .models import User, Project, CustomizeReq, PendingUser, AiMakeImage
 from .serializers import ProjectSerializer, PendingUserSerializer, AdminUserSerializer
 from interior.services.clients import get_generative_model, get_openai_client
+from interior.services.catalog_metadata import load_catalog_metadata, save_catalog_metadata
+from interior.services.catalog_poc_furniture_repository import fetch_furniture
 from interior.services.design_pipeline import (
     PipelineStepError,
     run_design_pipeline,
@@ -222,6 +225,72 @@ def change_password(request, user_id):
     return Response({"message": "비밀번호가 변경되었습니다."}, status=status.HTTP_200_OK)
 
 
+@api_view(["POST"])
+def reset_password(request):
+    user_id = request.data.get("user_id")
+    email = request.data.get("email")
+    new_password = request.data.get("new_password")
+    confirm_password = request.data.get("confirm_password")
+
+    if not all([user_id, email, new_password, confirm_password]):
+        return Response(
+            {"error": "아이디, 이메일, 새 비밀번호를 모두 입력해 주세요."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if new_password != confirm_password:
+        return Response({"error": "새 비밀번호가 일치하지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+    pending_entry = (
+        PendingUser.objects.filter(user_id=user_id)
+        .order_by("-registered_at")
+        .first()
+    )
+
+    if not pending_entry:
+        return Response(
+            {"error": "입력하신 정보와 일치하는 계정을 찾을 수 없습니다."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    if pending_entry.status == "rejected":
+        return Response(
+            {"error": "해당 계정은 가입 거절 상태입니다. 관리자에게 문의해 주세요."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    stored_email = (pending_entry.email or "").strip().lower()
+    if not stored_email:
+        return Response(
+            {"error": "이 계정에는 등록된 이메일 정보가 없습니다. 관리자에게 문의해 주세요."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if stored_email != email.strip().lower():
+        return Response(
+            {"error": "등록된 이메일과 일치하지 않습니다."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    hashed_pw = hash_password(new_password)
+
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT 1 FROM users WHERE user_id = %s", [user_id])
+        if cursor.fetchone() is None:
+            return Response(
+                {"error": "승인된 사용자 정보를 찾을 수 없습니다. 관리자에게 문의해 주세요."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        cursor.execute("UPDATE users SET password = %s WHERE user_id = %s", [hashed_pw, user_id])
+
+    if pending_entry.password != hashed_pw:
+        pending_entry.password = hashed_pw
+        pending_entry.save(update_fields=["password"])
+
+    return Response({"message": "새 비밀번호가 설정되었습니다."}, status=status.HTTP_200_OK)
+
+
 @api_view(['POST'])
 @parser_classes([MultiPartParser, FormParser])
 def create_project(request):
@@ -328,6 +397,40 @@ def create_project(request):
             value = 3
         return max(1, min(9, value))
 
+    def _to_bool(value) -> bool:
+        if value is None:
+            return False
+        return str(value).strip().lower() in {"1", "true", "y", "yes", "on"}
+
+    SPACE_TO_BIG_CAT = {
+        "거실": "room_0002",
+        "리빙": "room_0002",
+        "living": "room_0002",
+        "침실": "room_0003",
+        "침대": "room_0003",
+        "bed": "room_0003",
+        "주방": "room_0004",
+        "부엌": "room_0004",
+        "kitchen": "room_0004",
+        "다이닝": "room_0005",
+        "식당": "room_0005",
+        "서재": "room_0006",
+        "study": "room_0006",
+    }
+
+    def _infer_big_cat(space_label: Optional[str]) -> Optional[str]:
+        if not space_label:
+            return None
+        lowered = space_label.lower()
+        for key, cat in SPACE_TO_BIG_CAT.items():
+            if key.lower() in lowered:
+                return cat
+        return None
+
+    use_catalog_furniture = _to_bool(data.get("use_catalog_furniture"))
+    catalog_instruction = ""
+    catalog_plan = []
+
     if image_bytes:
         try:
             with tempfile.NamedTemporaryFile(suffix=f".{image_ext}", delete=False) as temp_file:
@@ -341,6 +444,16 @@ def create_project(request):
                 raise PipelineStepError(str(exc)) from exc
 
             variations = _resolve_variations()
+            if use_catalog_furniture:
+                big_cat = _infer_big_cat(data.get("space_type"))
+                catalog_instruction = (
+                    data.get("catalog_instruction")
+                    or f"{data.get('design_style') or ''} 스타일을 참고해서 선택된 한샘 가구를만 사용해 공간을 연출해 주세요."
+                )
+                for _ in range(variations):
+                    catalog_plan.append(fetch_furniture(limit=3, big_cat=big_cat))
+                if not any(catalog_plan):
+                    use_catalog_furniture = False
 
             pipeline_images = run_design_pipeline(
                 temp_source_path,
@@ -350,6 +463,9 @@ def create_project(request):
                 refinement_prompt=refinement_prompt,
                 furniture_paths=None,
                 variations=variations,
+                use_catalog_furniture=use_catalog_furniture,
+                catalog_furniture_plan=catalog_plan,
+                catalog_instruction=catalog_instruction,
             )
 
             variant_payloads = []
@@ -390,6 +506,10 @@ def create_project(request):
                             "image_url": result_url,
                         }
                     )
+
+                    catalog_meta = variant.get("catalog_furnitures")
+                    if catalog_meta:
+                        save_catalog_metadata(next_image_id + offset, catalog_meta)
 
             payload_status = "completed"
             if pipeline_errors:
@@ -598,6 +718,7 @@ def list_project_ai_images(request, project_id):
                 "req_id": getattr(req, "req_id", None),
                 "image_url": image.ai_image_path,
                 "is_selected": (image.is_selected or "").upper() == "Y",
+                "catalog_furnitures": load_catalog_metadata(image.image_id) or [],
                 "source_image_id": getattr(image, "source_image_id", None),
                 "design_style": getattr(req, "design_style", None),
                 "residence_type": getattr(req, "residence_type", None),

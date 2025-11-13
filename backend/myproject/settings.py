@@ -116,6 +116,53 @@ else:
             "BACKEND": "django.core.files.storage.FileSystemStorage",
         }
     }
+
+# === Logging ===
+LOG_DIR = Path(env("DJANGO_LOG_DIR", default=BASE_DIR / "logs"))
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+LOG_FILE = LOG_DIR / env("DJANGO_LOG_FILE", default="backend.log")
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "[%(asctime)s] %(levelname)s %(name)s:%(lineno)d | %(message)s",
+        }
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+        "file": {
+            "class": "logging.FileHandler",
+            "filename": str(LOG_FILE),
+            "formatter": "verbose",
+        },
+    },
+    "root": {
+        "handlers": ["console", "file"],
+        "level": "INFO",
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "project_app": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "interior": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}
 # ==== SAFETY MODE ====
 # prevent Django from running migrations automatically
 MIGRATION_MODULES = {

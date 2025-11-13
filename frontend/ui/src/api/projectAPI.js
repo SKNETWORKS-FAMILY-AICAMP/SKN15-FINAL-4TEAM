@@ -135,6 +135,22 @@ export const changeUserPassword = async (user_id, payload) => {
   }
 };
 
+// ✅ 비밀번호 재설정 (아이디 + 이메일 확인)
+export const resetPassword = async ({ user_id, email, new_password, confirm_password }) => {
+  try {
+    const res = await axios.post(`${API_BASE}/auth/reset-password/`, {
+      user_id,
+      email,
+      new_password,
+      confirm_password,
+    });
+    return res.data;
+  } catch (error) {
+    console.error("❌ 비밀번호 재설정 실패:", error.response?.data || error);
+    throw error;
+  }
+};
+
 // ✅ 프로젝트 통계 조회 (대시보드)
 export const getStats = async (user_id) => {
   try {

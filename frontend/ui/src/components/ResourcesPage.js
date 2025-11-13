@@ -12,6 +12,7 @@ function ResourcesPage() {
   const [smallCategories, setSmallCategories] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [sortOption, setSortOption] = useState("default");
   const itemsPerPage = 12;
 
   // Animation variants
@@ -101,16 +102,43 @@ function ResourcesPage() {
     return roomMatch && smallCatMatch && searchMatch;
   });
 
+  const normalizePrice = (price) => {
+    if (price === undefined || price === null) return null;
+    const numeric = parseInt(String(price).replace(/[^0-9]/g, ""), 10);
+    return Number.isNaN(numeric) ? null : numeric;
+  };
+
+  const sortedFurniture = [...filteredFurniture].sort((a, b) => {
+    if (sortOption === "name") {
+      const nameA = a.name?.toLowerCase() ?? "";
+      const nameB = b.name?.toLowerCase() ?? "";
+      return nameA.localeCompare(nameB, "ko");
+    }
+
+    if (sortOption === "price-asc" || sortOption === "price-desc") {
+      const priceA = normalizePrice(a.price);
+      const priceB = normalizePrice(b.price);
+
+      if (priceA === null && priceB === null) return 0;
+      if (priceA === null) return 1;
+      if (priceB === null) return -1;
+
+      return sortOption === "price-asc" ? priceA - priceB : priceB - priceA;
+    }
+
+    return 0;
+  });
+
   // 페이지네이션 계산
-  const totalPages = Math.ceil(filteredFurniture.length / itemsPerPage);
+  const totalPages = Math.ceil(sortedFurniture.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentFurniture = filteredFurniture.slice(startIndex, endIndex);
+  const currentFurniture = sortedFurniture.slice(startIndex, endIndex);
 
   // 카테고리 변경 시 페이지를 1로 리셋
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeRoomCategory, activeSmallCategory, searchText]);
+  }, [activeRoomCategory, activeSmallCategory, searchText, sortOption]);
 
   // 페이지 번호 생성 함수 (최대 10개까지만 표시)
   const getPageNumbers = () => {
@@ -380,6 +408,62 @@ function ResourcesPage() {
         </div>
       </motion.div>
 
+      {/* Sorter */}
+      <div
+        style={{
+          maxWidth: "1200px",
+          margin: "0 auto",
+          padding: "0 20px",
+          marginTop: "-20px",
+          marginBottom: "10px",
+          display: "flex",
+          justifyContent: "flex-end",
+        }}
+      >
+        <div style={{ textAlign: "left" }}>
+          <label
+            htmlFor="resource-sorter"
+            style={{
+              display: "block",
+              marginBottom: "8px",
+              fontSize: "0.9rem",
+              fontWeight: 600,
+              color: "rgba(255, 255, 255, 0.75)",
+            }}
+          >
+            정렬 기준
+          </label>
+          <select
+            id="resource-sorter"
+            value={sortOption}
+            onChange={(e) => setSortOption(e.target.value)}
+            style={{
+              minWidth: "200px",
+              padding: "10px 18px",
+              borderRadius: "999px",
+              border: "1px solid rgba(255, 255, 255, 0.2)",
+              backgroundColor: "rgba(255, 255, 255, 0.08)",
+              color: "#fff",
+              fontSize: "0.95rem",
+              outline: "none",
+            }}
+          >
+            <option value="default" style={{ color: "#000" }}>
+              기본 순
+            </option>
+            <option value="name" style={{ color: "#000" }}>
+              이름순 (가나다)
+            </option>
+            <option value="price-asc" style={{ color: "#000" }}>
+              가격 낮은순
+            </option>
+            <option value="price-desc" style={{ color: "#000" }}>
+              가격 높은순
+            </option>
+          </select>
+        </div>
+      </div>
+
       {/* Furniture Grid */}
       <div
         style={{
@@ -563,7 +647,7 @@ function ResourcesPage() {
       </div>
 
       {/* Pagination */}
-      {filteredFurniture.length > 0 && totalPages > 1 && (
+      {sortedFurniture.length > 0 && totalPages > 1 && (
         <motion.div
           style={{
             display: "flex",

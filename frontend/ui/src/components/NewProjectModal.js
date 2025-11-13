@@ -17,6 +17,7 @@ function NewProjectModal({ onClose, onCreated }) {
     style: "",
     refinement: "",
     emptyRoom: false,
+    useCatalogFurniture: false,
     variations: 3,
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -93,6 +94,7 @@ function NewProjectModal({ onClose, onCreated }) {
       formData.append("refinement_prompt", form.refinement);
       formData.append("image_variations", String(form.variations || 3));
       formData.append("empty_room", form.emptyRoom ? "true" : "false");
+      formData.append("use_catalog_furniture", form.useCatalogFurniture ? "true" : "false");
       if (form.image) formData.append("image", form.image);
       else {
         setErrorMessage("원본 이미지를 업로드해 주세요.");
@@ -239,6 +241,15 @@ function NewProjectModal({ onClose, onCreated }) {
                   onChange={handleChange}
                 />
                 빈 방인가요?
+              </label>
+              <label className="checkbox">
+                <input
+                  type="checkbox"
+                  name="useCatalogFurniture"
+                  checked={form.useCatalogFurniture}
+                  onChange={handleChange}
+                />
+                한샘 가구만 사용하기
               </label>
 
               <motion.button

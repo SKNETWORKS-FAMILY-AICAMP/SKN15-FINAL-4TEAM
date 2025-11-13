@@ -38,19 +38,20 @@ function ProjectSummaryPage() {
           id: image.image_id?.toString() || `ai-${index}`,
           imageId: image.image_id,
           sourceImageId: image.source_image_id ?? null,
-          title: image.design_style || `디자인 컨셉 ${index + 1}`,
-          description:
-            image.residence_type ||
-            image.family_type ||
-            image.space_type ||
-            "생성된 인테리어 디자인",
-          imageUrl: image.image_url,
-          designStyle: image.design_style,
-          residenceType: image.residence_type,
-          spaceType: image.space_type,
-          budgetRange: image.budget_range,
-          familyType: image.family_type,
-        }));
+        title: image.design_style || `디자인 컨셉 ${index + 1}`,
+        description:
+          image.residence_type ||
+          image.family_type ||
+          image.space_type ||
+          "생성된 인테리어 디자인",
+        imageUrl: image.image_url,
+        designStyle: image.design_style,
+        residenceType: image.residence_type,
+        spaceType: image.space_type,
+        budgetRange: image.budget_range,
+        familyType: image.family_type,
+        catalogFurnitures: image.catalog_furnitures || [],
+      }));
         setConcepts(mapped);
         const prioritized =
           selectedFromState.find((id) =>
@@ -110,20 +111,36 @@ function ProjectSummaryPage() {
   }, [primaryImage, memoStorageKey, defaultDesignMemo]);
 
   const specificationEntries = useMemo(() => {
+    const furnitureNames =
+      primaryImage?.catalogFurnitures
+        ?.map((item) => item.name || item.goods_name)
+        .filter(Boolean) ?? [];
+
     if (!primaryImage) {
       return [
         { label: "스타일", value: "-" },
         { label: "주요 공간", value: "-" },
         { label: "예산", value: "-" },
         { label: "가족 구성", value: "-" },
+        { label: "사용 가구", value: "-" },
       ];
     }
-    return [
+
+    const entries = [
       { label: "스타일", value: primaryImage.designStyle || "-" },
       { label: "주요 공간", value: primaryImage.spaceType || "-" },
       { label: "예산", value: primaryImage.budgetRange || "-" },
       { label: "가족 구성", value: primaryImage.familyType || "-" },
     ];
+
+    if (furnitureNames.length) {
+      entries.push({
+        label: "사용 가구",
+        value: furnitureNames.join(", "),
+      });
+    }
+
+    return entries;
   }, [primaryImage]);
 
   const handleSelectImage = (conceptId) => {

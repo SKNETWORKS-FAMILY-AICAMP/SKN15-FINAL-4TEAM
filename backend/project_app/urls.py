@@ -6,6 +6,7 @@ from .views import (
     health_check,
     user_profile,
     change_password,
+    reset_password,
     create_project,
     list_projects,
     list_project_ai_images,
@@ -27,6 +28,7 @@ urlpatterns = [
     path('health/', health_check, name='health'),
     path('users/<str:user_id>/', user_profile, name='user-profile'),
     path('users/<str:user_id>/change-password/', change_password, name='change-password'),
+    path('auth/reset-password/', reset_password, name='reset-password'),
 
     # ✅ 프로젝트 관련
     path('projects/create/', create_project, name='project-create'),

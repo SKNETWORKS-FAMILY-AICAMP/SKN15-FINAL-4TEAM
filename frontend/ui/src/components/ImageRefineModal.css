@@ -130,6 +130,28 @@
   line-height: 1.5;
 }
 
+.refine-form__catalog {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.refine-form__catalog span {
+  display: inline-block;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.refine-form__catalog ul {
+  margin: 0;
+  padding-left: 18px;
+  list-style: disc;
+}
+
+.refine-form__catalog li {
+  margin-bottom: 2px;
+}
+
 .refine-form__label {
   font-size: 0.85rem;
   font-weight: 600;

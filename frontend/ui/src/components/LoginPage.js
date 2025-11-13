@@ -2,13 +2,24 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { resetPassword } from "../api/projectAPI";
 import "../App.css";
 
 function LoginPage() {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
+  const [resetErrorMessage, setResetErrorMessage] = useState("");
+  const [resetSuccessMessage, setResetSuccessMessage] = useState("");
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const navigate = useNavigate();
   const { login, register } = useAuth();
+
+  const closeForgotPasswordModal = () => {
+    setShowForgotPassword(false);
+    setResetErrorMessage("");
+    setResetSuccessMessage("");
+    setIsResettingPassword(false);
+  };
 
   // Animation variants
   const fadeUp = {
@@ -37,10 +48,53 @@ function LoginPage() {
     }
   };
 
-  const handleForgotPassword = (e) => {
+  const handleForgotPassword = async (e) => {
     e.preventDefault();
-    alert("비밀번호 재설정 링크가 이메일로 전송되었습니다!");
-    setShowForgotPassword(false);
+    setResetErrorMessage("");
+    setResetSuccessMessage("");
+
+    const formData = new FormData(e.target);
+    const userId = formData.get("forgotUserId")?.trim();
+    const email = formData.get("forgotEmail")?.trim();
+    const newPassword = formData.get("forgotNewPassword") || "";
+    const confirmPassword = formData.get("forgotConfirmPassword") || "";
+
+    if (!userId || !email) {
+      setResetErrorMessage("아이디와 이메일을 모두 입력해 주세요.");
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setResetErrorMessage("새 비밀번호는 8자 이상이어야 합니다.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setResetErrorMessage("새 비밀번호가 일치하지 않습니다.");
+      return;
+    }
+
+    try {
+      setIsResettingPassword(true);
+      await resetPassword({
+        user_id: userId,
+        email,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+      });
+      setResetSuccessMessage("새 비밀번호가 설정되었습니다. 새 비밀번호로 로그인해 주세요.");
+      e.target.reset();
+      setTimeout(() => {
+        closeForgotPasswordModal();
+      }, 1500);
+    } catch (error) {
+      const message =
+        error.response?.data?.error ||
+        "비밀번호 재설정 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+      setResetErrorMessage(message);
+    } finally {
+      setIsResettingPassword(false);
+    }
   };
 
   const handleRegister = async (e) => {
@@ -339,6 +393,8 @@ function LoginPage() {
           <button
             type="button"
             onClick={() => {
+              setResetErrorMessage("");
+              setResetSuccessMessage("");
               setShowForgotPassword(true);
             }}
             style={{
@@ -398,7 +454,7 @@ function LoginPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => setShowForgotPassword(false)}
+            onClick={closeForgotPasswordModal}
           >
             <motion.div
               style={{
@@ -420,7 +476,7 @@ function LoginPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <button
-                onClick={() => setShowForgotPassword(false)}
+                onClick={closeForgotPasswordModal}
                 style={{
                   position: "absolute",
                   top: "20px",
@@ -452,7 +508,47 @@ function LoginPage() {
               </h2>
 
               <form onSubmit={handleForgotPassword}>
-                <div style={{ marginBottom: "25px" }}>
+                <div style={{ marginBottom: "20px" }}>
+                  <label
+                    htmlFor="forgotUserId"
+                    style={{
+                      display: "block",
+                      marginBottom: "10px",
+                      fontWeight: 600,
+                      color: "rgba(255, 255, 255, 0.9)",
+                    }}
+                  >
+                    아이디
+                  </label>
+                  <input
+                    type="text"
+                    id="forgotUserId"
+                    name="forgotUserId"
+                    placeholder="아이디를 입력하세요"
+                    required
+                    style={{
+                      width: "100%",
+                      padding: "14px 18px",
+                      border: "2px solid rgba(255, 255, 255, 0.1)",
+                      borderRadius: "12px",
+                      fontSize: "1em",
+                      boxSizing: "border-box",
+                      transition: "all 0.3s ease",
+                      background: "rgba(255, 255, 255, 0.05)",
+                      color: "#fff",
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#ff6b35";
+                      e.target.style.boxShadow = "0 0 0 4px rgba(255, 107, 53, 0.1)";
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "rgba(255, 255, 255, 0.1)";
+                      e.target.style.boxShadow = "none";
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: "20px" }}>
                   <label
                     htmlFor="forgotEmail"
                     style={{
@@ -467,6 +563,7 @@ function LoginPage() {
                   <input
                     type="email"
                     id="forgotEmail"
+                    name="forgotEmail"
                     placeholder="이메일 주소를 입력하세요"
                     required
                     style={{
@@ -491,8 +588,100 @@ function LoginPage() {
                   />
                 </div>
 
+                <div style={{ marginBottom: "20px" }}>
+                  <label
+                    htmlFor="forgotNewPassword"
+                    style={{
+                      display: "block",
+                      marginBottom: "10px",
+                      fontWeight: 600,
+                      color: "rgba(255, 255, 255, 0.9)",
+                    }}
+                  >
+                    새 비밀번호
+                  </label>
+                  <input
+                    type="password"
+                    id="forgotNewPassword"
+                    name="forgotNewPassword"
+                    placeholder="새 비밀번호를 입력하세요 (8자 이상)"
+                    required
+                    style={{
+                      width: "100%",
+                      padding: "14px 18px",
+                      border: "2px solid rgba(255, 255, 255, 0.1)",
+                      borderRadius: "12px",
+                      fontSize: "1em",
+                      boxSizing: "border-box",
+                      transition: "all 0.3s ease",
+                      background: "rgba(255, 255, 255, 0.05)",
+                      color: "#fff",
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#ff6b35";
+                      e.target.style.boxShadow = "0 0 0 4px rgba(255, 107, 53, 0.1)";
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "rgba(255, 255, 255, 0.1)";
+                      e.target.style.boxShadow = "none";
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: "25px" }}>
+                  <label
+                    htmlFor="forgotConfirmPassword"
+                    style={{
+                      display: "block",
+                      marginBottom: "10px",
+                      fontWeight: 600,
+                      color: "rgba(255, 255, 255, 0.9)",
+                    }}
+                  >
+                    새 비밀번호 확인
+                  </label>
+                  <input
+                    type="password"
+                    id="forgotConfirmPassword"
+                    name="forgotConfirmPassword"
+                    placeholder="새 비밀번호를 다시 입력하세요"
+                    required
+                    style={{
+                      width: "100%",
+                      padding: "14px 18px",
+                      border: "2px solid rgba(255, 255, 255, 0.1)",
+                      borderRadius: "12px",
+                      fontSize: "1em",
+                      boxSizing: "border-box",
+                      transition: "all 0.3s ease",
+                      background: "rgba(255, 255, 255, 0.05)",
+                      color: "#fff",
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#ff6b35";
+                      e.target.style.boxShadow = "0 0 0 4px rgba(255, 107, 53, 0.1)";
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "rgba(255, 255, 255, 0.1)";
+                      e.target.style.boxShadow = "none";
+                    }}
+                  />
+                </div>
+
+                {(resetErrorMessage || resetSuccessMessage) && (
+                  <div style={{ marginBottom: "15px", textAlign: "center" }}>
+                    {resetErrorMessage && (
+                      <p style={{ color: "#ff6b6b", margin: 0 }}>{resetErrorMessage}</p>
+                    )}
+                    {resetSuccessMessage && (
+                      <p style={{ color: "#4ade80", margin: 0 }}>{resetSuccessMessage}</p>
+                    )}
+                  </div>
+                )}
+
                 <motion.button
                   type="submit"
+                  disabled={isResettingPassword}
                   style={{
                     width: "100%",
                     padding: "14px",
@@ -502,13 +691,14 @@ function LoginPage() {
                     borderRadius: "12px",
                     fontSize: "1.05em",
                     fontWeight: 600,
-                    cursor: "pointer",
+                    cursor: isResettingPassword ? "not-allowed" : "pointer",
                     transition: "all 0.3s ease",
+                    opacity: isResettingPassword ? 0.7 : 1,
                   }}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={{ scale: isResettingPassword ? 1 : 1.02 }}
+                  whileTap={{ scale: isResettingPassword ? 1 : 0.98 }}
                 >
-                  비밀번호 재설정 링크 받기
+                  {isResettingPassword ? "처리 중..." : "새 비밀번호 설정"}
                 </motion.button>
               </form>
             </motion.div>

@@ -93,6 +93,18 @@ function ImageRefineModal({
             <div className="refine-form__meta">
               <h3>{concept?.title || "선택된 이미지"}</h3>
               {concept?.description && <p>{concept.description}</p>}
+              {concept?.catalogFurnitures?.length > 0 && (
+                <div className="refine-form__catalog">
+                  <span>사용 가구</span>
+                  <ul>
+                    {concept.catalogFurnitures.map((item, idx) => (
+                      <li key={`${item.goods_id || idx}`}>
+                        {item.name || item.goods_name || `가구 ${idx + 1}`}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
             <label className="refine-form__label" htmlFor="refine-prompt">
               수정할 사항을 입력하세요

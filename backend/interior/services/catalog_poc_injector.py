@@ -7,6 +7,7 @@ Catalog furniture injection proof of concept utilities.
 
 from __future__ import annotations
 
+import base64
 import mimetypes
 import os
 from dataclasses import dataclass
@@ -66,6 +67,7 @@ def compose_prompt(base_instruction: str, items: Iterable[FurnitureItem]) -> str
 class CatalogInjectionResult:
     output_path: Path
     prompt: str
+    furniture_items: List[FurnitureItem]
 
 
 def inject_with_gemini(
@@ -124,10 +126,16 @@ def inject_with_gemini(
                 break
         if not result_bytes:
             raise RuntimeError("Gemini 응답에 이미지 데이터가 없습니다. 프롬프트/입력을 확인하세요.")
+        if isinstance(result_bytes, str):
+            result_bytes = base64.b64decode(result_bytes)
         with open(output_path, "wb") as f:
             f.write(result_bytes)
 
-    return CatalogInjectionResult(output_path=output_path, prompt=prompt)
+    return CatalogInjectionResult(
+        output_path=output_path,
+        prompt=prompt,
+        furniture_items=items,
+    )
 
 
 def inject_with_overlay(
