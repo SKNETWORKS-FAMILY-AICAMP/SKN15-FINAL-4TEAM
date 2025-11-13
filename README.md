@@ -93,6 +93,9 @@ Amazon S3
  └─ 생성 이미지 저장
 ```
 
+<img width="3459" height="2436" alt="fin_system" src="https://github.com/user-attachments/assets/6703df82-398e-4c89-9741-6340802a2081" />
+
+
 ### 🔵 Primary Flow (Black Line)
 
 초기 입력 → 방 여부 분류 → (필요 시) Object Removal → 1차 및 최종 이미지 생성
