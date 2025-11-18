@@ -337,7 +337,7 @@ function AboutPage() {
               },
               {
                 text: "열정적인 팀원들이 만들어가는 Assemble의 미래를 함께하세요.",
-                title: "팀 소개",
+                title: "함께하는 미래",
                 icon: "fas fa-users",
                 emoji: "👥",
               },

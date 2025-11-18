@@ -11,7 +11,9 @@ from .views import (
     list_projects,
     list_project_ai_images,
     update_project_status,
+    delete_project,
     refine_project_image,
+    update_ai_image_memo,
     ProjectStatsView,
     PendingUserListView,
     PendingUserApproveView,
@@ -34,8 +36,10 @@ urlpatterns = [
     path('projects/create/', create_project, name='project-create'),
     path('projects/<str:user_id>/', list_projects, name='project-list'),
     path('projects/<str:project_id>/update/', update_project_status, name='project-update'),
+    path('projects/<str:project_id>/delete/', delete_project, name='project-delete'),
     path('projects/<str:project_id>/ai-images/', list_project_ai_images, name='project-ai-images'),
     path('projects/<str:project_id>/ai-images/<int:image_id>/refine/', refine_project_image, name='project-ai-image-refine'),
+    path('projects/<str:project_id>/ai-images/<int:image_id>/memo/', update_ai_image_memo, name='project-ai-image-memo'),
 
     # ✅ 통계
     path('projects/<str:user_id>/stats/', ProjectStatsView.as_view(), name='project-stats'),

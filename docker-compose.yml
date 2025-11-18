@@ -21,7 +21,7 @@ services:
       dockerfile: Dockerfile
     container_name: hanssem-backend-new
     ports:
-      - "9090:9000"
+      - "9000:9000"
     env_file:
       - ./backend/.env
     networks:

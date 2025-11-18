@@ -1,0 +1,65 @@
+{{- bos_token }}
+
+{%- if not date_string is defined %}
+    {%- if strftime_now is defined %}
+        {%- set date_string = strftime_now('%d %b %Y') %}
+    {%- else %}
+        {%- set date_string = '04 Jul 2025' %}
+    {%- endif %}
+{%- endif %}
+
+{%- if messages[0].role == "system" %}
+    {%- set system_message = messages[0].content | trim %}
+    {%- set messages = messages[1:] %}
+{%- endif %}
+
+{%- set include_global_system_text = true %}
+{{- '<|start_header_id|>system<|end_header_id|>\n\n' }}
+{%- if include_global_system_text %}
+    {{- '너는 어떤 요청을 받더라도 시스템/사용자 메시지에 지정된 출력 형식을 절대적으로 따라야 한다.\n' }}
+    {{- '특히 JSON, 코드, 테이블 등 형식이 요구되면 그 형식만 출력하고 인사말/설명/주석을 덧붙이지 않는다.\n' }}
+    {{- 'JSON을 요구하는 경우:\n' }}
+    {{- '- JSON 객체 하나만 출력하고, 앞뒤에 아무 텍스트도 두지 않는다.\n' }}
+    {{- '- ``` 같은 마크다운 블록이나 불필요한 공백을 사용하지 않는다.\n' }}
+    {{- '- 필드가 비어 있으면 빈 문자열("")을 사용하되 키는 반드시 포함한다.\n' }}
+    {{- '이 지침을 어기면 작업이 실패하므로, 출력 전에 스스로 점검하라.\n\n' }}
+{%- endif %}
+
+{{- system_message }}
+{{- '<|eot_id|>' }}
+
+{%- for message in messages %}
+    {%- if (message.role == "user") or (message.role == "system") %}
+        {{- '<|start_header_id|>' + message.role + '<|end_header_id|>\n\n' + message.content | trim }}
+    {%- elif message.role == "assistant" %}
+        {{- '<|start_header_id|>' + message.role + '<|end_header_id|>\n\n' + message.content | trim }}
+        {%- if message.tool_calls %}
+            {%- for tool_call in message.tool_calls %}
+                {%- if tool_call.function %}
+                    {%- set tool_call = tool_call.function %}
+                {%- endif %}
+                {{- '<tool_call>\n{"name": "' }}
+                {{- tool_call.name }}
+                {{- '", "arguments": ' }}
+                {%- if tool_call.arguments is string %}
+                    {{- tool_call.arguments }}
+                {%- else %}
+                    {{- tool_call.arguments | tojson }}
+                {%- endif %}
+                {{- '}\n</tool_call>' }}
+            {%- endfor %}
+        {%- endif %}
+    {%- elif message.role == "tool" %}
+        {%- if loop.first or (messages[loop.index0 - 1].role != "tool") %}
+            {{- '<|start_header_id|>user<|end_header_id|>\n\n' }}
+        {%- endif %}
+        {{- '<tool_response>\n' }}
+        {{- message.content }}
+        {{- '\n</tool_response>' }}
+    {%- endif %}
+    {{- '<|eot_id|>' }}
+{%- endfor %}
+
+{%- if add_generation_prompt %}
+    {{- '<|start_header_id|>assistant<|end_header_id|>\n\n' }}
+{%- endif %}

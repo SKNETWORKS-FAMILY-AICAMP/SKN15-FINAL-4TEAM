@@ -33,7 +33,12 @@ def save_catalog_metadata(image_id: int, furnitures: List[dict]) -> None:
         "furnitures": [
             {
                 "goods_id": item.get("goods_id"),
+                "goods_name": item.get("goods_name") or item.get("name"),
                 "name": item.get("goods_name") or item.get("name"),
+                "brand": item.get("brand"),
+                "price": item.get("price"),
+                "discount_rate": item.get("discount_rate"),
+                "url": item.get("url") or item.get("link"),
             }
             for item in furnitures
         ],
@@ -58,3 +63,11 @@ def load_catalog_metadata(image_id: int) -> Optional[List[dict]]:
 
     return payload.get("furnitures") or None
 
+
+def delete_catalog_metadata(image_id: int) -> None:
+    """
+    저장된 가구 리스트 파일을 삭제한다.
+    """
+    path = f"{META_DIR}/{image_id}.json"
+    if default_storage.exists(path):
+        default_storage.delete(path)

@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from django.core.exceptions import ImproperlyConfigured
 
 import environ
+from corsheaders.defaults import default_headers
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
@@ -82,6 +83,7 @@ REST_FRAMEWORK = {
 }
 
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_HEADERS = list(default_headers) + ["x-user-id"]
 
 
 # === AWS S3 설정 ===
@@ -176,3 +178,11 @@ if not OPENAI_TEAM_API_KEY:
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     raise ImproperlyConfigured("GEMINI_API_KEY 환경변수가 설정되어 있지 않습니다.")
+
+SLLM_MODEL_DIR = os.environ.get("SLLM_MODEL_DIR", str(BASE_DIR / "sllm"))
+SLLM_MAX_NEW_TOKENS = int(os.environ.get("SLLM_MAX_NEW_TOKENS", 384))
+SLLM_TEMPERATURE = float(os.environ.get("SLLM_TEMPERATURE", 0.7))
+SLLM_TOP_P = float(os.environ.get("SLLM_TOP_P", 0.85))
+SLLM_TOP_K = int(os.environ.get("SLLM_TOP_K", 40))
+SLLM_DEVICE = os.environ.get("SLLM_DEVICE", "auto")
+DESIGN_PIPELINE_GEMINI_TIMEOUT = int(os.environ.get("DESIGN_PIPELINE_GEMINI_TIMEOUT", 360))

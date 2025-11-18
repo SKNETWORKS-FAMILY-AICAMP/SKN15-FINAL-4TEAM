@@ -109,6 +109,8 @@ class AiMakeImage(models.Model):
     ai_image_path = models.TextField(blank=True, null=True)
     is_selected = models.CharField(max_length=1, blank=True, null=True)
     source_image_id = models.IntegerField(blank=True, null=True, db_column="source_image_id")
+    design_memo = models.TextField(blank=True, null=True, db_column="design_memo")
+    design_memo_sllm = models.TextField(blank=True, null=True, db_column="design_memo_sllm")
 
     class Meta:
         db_table = "ai_make_image"

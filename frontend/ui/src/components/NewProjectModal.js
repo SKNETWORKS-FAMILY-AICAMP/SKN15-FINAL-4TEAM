@@ -2,11 +2,17 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createProject } from "../api/projectAPI";
+import {
+  SPACE_OPTIONS,
+  COST_OPTIONS,
+  STYLE_OPTIONS,
+  formatOptionLabel,
+} from "../utils/categoryOptions";
 import "./NewProjectModal.css";
 
 function NewProjectModal({ onClose, onCreated }) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [title, setTitle] = useState("새 프로젝트 생성");
+  const [title, setTitle] = useState("");
   const [form, setForm] = useState({
     image: null,
     imagePreview: null,
@@ -17,7 +23,7 @@ function NewProjectModal({ onClose, onCreated }) {
     style: "",
     refinement: "",
     emptyRoom: false,
-    useCatalogFurniture: false,
+    allowCreativeFurniture: false,
     variations: 3,
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -94,7 +100,8 @@ function NewProjectModal({ onClose, onCreated }) {
       formData.append("refinement_prompt", form.refinement);
       formData.append("image_variations", String(form.variations || 3));
       formData.append("empty_room", form.emptyRoom ? "true" : "false");
-      formData.append("use_catalog_furniture", form.useCatalogFurniture ? "true" : "false");
+      const useCatalogOnly = !form.allowCreativeFurniture;
+      formData.append("use_catalog_furniture", useCatalogOnly ? "true" : "false");
       if (form.image) formData.append("image", form.image);
       else {
         setErrorMessage("원본 이미지를 업로드해 주세요.");
@@ -125,7 +132,6 @@ function NewProjectModal({ onClose, onCreated }) {
     <AnimatePresence>
       <motion.div
         className={`modal-overlay ${isBlocked ? "is-loading" : ""}`}
-        onClick={onClose}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -148,64 +154,157 @@ function NewProjectModal({ onClose, onCreated }) {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 onBlur={() => setIsEditingTitle(false)}
+                placeholder="프로젝트 제목을 입력하세요"
                 autoFocus
               />
             ) : (
-              <h2 onClick={() => setIsEditingTitle(true)}>{title} ✏️</h2>
+              <button
+                type="button"
+                className="modal-title-display"
+                onClick={() => setIsEditingTitle(true)}
+              >
+                {title ? (
+                  <span className="modal-title-text">{title}</span>
+                ) : (
+                  <span className="modal-title-placeholder">
+                    제목을 입력하세요
+                    <span className="modal-title-pencil" aria-hidden="true">
+                      ✏️
+                    </span>
+                  </span>
+                )}
+              </button>
             )}
           </div>
 
           <form onSubmit={handleSubmit} className="new-project-form">
-            {/* ✅ 이미지 업로드 영역 */}
-            <div className="image-upload">
-              {form.imagePreview ? (
-                <div className="image-preview-container">
-                  <img
-                    src={form.imagePreview}
-                    alt="preview"
-                    className="uploaded-image"
-                  />
-                  <button
-                    type="button"
-                    className="image-remove"
-                    onClick={handleImageRemove}
-                  >
-                    ✕
-                  </button>
-                </div>
-              ) : (
-                <label htmlFor="imageUpload" className="upload-label">
-                  <i className="fas fa-cloud-upload-alt"></i> 이미지 업로드
+            <div className="form-left">
+              {/* ✅ 이미지 업로드 영역 */}
+              <div className="image-upload">
+                {form.imagePreview ? (
+                  <div className="image-preview-container">
+                    <img
+                      src={form.imagePreview}
+                      alt="preview"
+                      className="uploaded-image"
+                    />
+                    <button
+                      type="button"
+                      className="image-remove"
+                      onClick={handleImageRemove}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <label htmlFor="imageUpload" className="upload-label">
+                    <i className="fas fa-cloud-upload-alt"></i> 이미지 업로드
+                    <input
+                      type="file"
+                      id="imageUpload"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      style={{ display: "none" }}
+                    />
+                  </label>
+                )}
+              </div>
+
+              <div className="left-options">
+                <div className="form-group">
+                  <label>생성할 시안 개수 (1~9)</label>
                   <input
-                    type="file"
-                    id="imageUpload"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    style={{ display: "none" }}
+                    type="number"
+                    name="variations"
+                    min="1"
+                    max="9"
+                    value={form.variations}
+                    onChange={handleChange}
+                    className="compact-input"
                   />
+                  <p className="field-help">
+                    한 번에 생성할 AI 이미지 수를 선택하세요. 최대 9개까지 가능합니다.
+                  </p>
+                </div>
+
+                <label className="checkbox">
+                  <input
+                    type="checkbox"
+                    name="emptyRoom"
+                    checked={form.emptyRoom}
+                    onChange={handleChange}
+                  />
+                  빈 방인가요?
                 </label>
-              )}
+                <label className="checkbox">
+                  <input
+                    type="checkbox"
+                    name="allowCreativeFurniture"
+                    checked={form.allowCreativeFurniture}
+                    onChange={handleChange}
+                  />
+                  상상이 허용된 가구 사용 (체크 시 자유롭게 생성)
+                </label>
+              </div>
             </div>
 
             {/* 우측 폼 */}
             <div className="form-right">
-              {[
-                { label: "주거유형", name: "type", placeholder: "예: 아파트" },
-                { label: "공간", name: "space", placeholder: "예: 거실" },
-                { label: "예산", name: "budget", placeholder: "예: 300만원" },
-                { label: "가족유형", name: "family", placeholder: "예: 신혼부부" },
-                { label: "스타일", name: "style", placeholder: "예: 미니멀리즘" },
-              ].map((f, i) => (
-                <div key={i} className="form-group">
-                  <label>{f.label}</label>
-                  <input
-                    name={f.name}
-                    value={form[f.name]}
-                    onChange={handleChange}
-                    placeholder={f.placeholder}
-                  />
-                </div>
-              ))}
+              <div className="form-group">
+                <label>주거유형</label>
+                <input
+                  name="type"
+                  value={form.type}
+                  onChange={handleChange}
+                  placeholder="예: 아파트"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>공간</label>
+                <select name="space" value={form.space} onChange={handleChange}>
+                  <option value="">공간을 선택하세요</option>
+                  {SPACE_OPTIONS.map((option) => (
+                    <option key={option.code} value={option.code}>
+                      {formatOptionLabel(option)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>예산</label>
+                <select name="budget" value={form.budget} onChange={handleChange}>
+                  <option value="">예산을 선택하세요</option>
+                  {COST_OPTIONS.map((option) => (
+                    <option key={option.code} value={option.code}>
+                      {formatOptionLabel(option)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>가족유형</label>
+                <input
+                  name="family"
+                  value={form.family}
+                  onChange={handleChange}
+                  placeholder="예: 신혼부부"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>스타일</label>
+                <select name="style" value={form.style} onChange={handleChange}>
+                  <option value="">스타일을 선택하세요</option>
+                  {STYLE_OPTIONS.map((option) => (
+                    <option key={option.code} value={option.code}>
+                      {formatOptionLabel(option)}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               <div className="form-group">
                 <label>세부 수정 요청</label>
@@ -217,40 +316,6 @@ function NewProjectModal({ onClose, onCreated }) {
                   rows={3}
                 />
               </div>
-
-              <div className="form-group">
-                <label>생성할 시안 개수 (1~9)</label>
-                <input
-                  type="number"
-                  name="variations"
-                  min="1"
-                  max="9"
-                  value={form.variations}
-                  onChange={handleChange}
-                />
-                <p className="field-help">
-                  한 번에 생성할 AI 이미지 수를 선택하세요. 최대 9개까지 가능합니다.
-                </p>
-              </div>
-
-              <label className="checkbox">
-                <input
-                  type="checkbox"
-                  name="emptyRoom"
-                  checked={form.emptyRoom}
-                  onChange={handleChange}
-                />
-                빈 방인가요?
-              </label>
-              <label className="checkbox">
-                <input
-                  type="checkbox"
-                  name="useCatalogFurniture"
-                  checked={form.useCatalogFurniture}
-                  onChange={handleChange}
-                />
-                한샘 가구만 사용하기
-              </label>
 
               <motion.button
                 type="submit"

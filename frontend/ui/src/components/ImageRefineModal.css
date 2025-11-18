@@ -49,16 +49,18 @@
 }
 
 .refine-body {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr;
+  display: flex;
   gap: 32px;
   padding: 0 28px 32px;
+  align-items: stretch;
 }
 
 .refine-preview {
   display: flex;
   flex-direction: column;
   gap: 18px;
+  flex: 1 1 40%;
+  justify-content: space-between;
 }
 
 .refine-preview__frame {
@@ -89,12 +91,13 @@
   display: flex;
   justify-content: center;
   gap: 12px;
+  margin-top: auto;
 }
 
 .refine-preview__controls button {
-  padding: 10px 24px;
-  border-radius: 60px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 12px 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   background: rgba(255, 255, 255, 0.05);
   color: #fff;
   cursor: pointer;
@@ -107,7 +110,7 @@
 }
 
 .refine-preview__controls button:not(:disabled):hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.18);
   transform: translateY(-1px);
 }
 
@@ -115,6 +118,12 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
+  flex: 1 1 60%;
+  align-items: center;
+}
+
+.refine-form__meta {
+  width: 90%;
 }
 
 .refine-form__meta h3 {
@@ -158,10 +167,11 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.45);
+  width: 90%;
 }
 
 .refine-form textarea {
-  width: 100%;
+  width: 90%;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.03);
@@ -170,7 +180,7 @@
   color: #f7f7f7;
   line-height: 1.6;
   resize: vertical;
-  min-height: 140px;
+  min-height: 180px;
 }
 
 .refine-form textarea:focus {
@@ -185,8 +195,15 @@
   line-height: 1.4;
 }
 
+.refine-submit,
+.refine-preview__controls button {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
 .refine-submit {
-  align-self: flex-end;
+  align-self: center;
   padding: 12px 32px;
   border-radius: 999px;
   border: none;
@@ -196,6 +213,8 @@
   background: linear-gradient(135deg, #00c9ff 0%, #92fe9d 100%);
   color: #06121a;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  width: 90%;
+  margin-top: auto;
 }
 
 .refine-submit:disabled {

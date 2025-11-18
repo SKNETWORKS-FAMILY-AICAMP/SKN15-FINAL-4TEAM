@@ -5,15 +5,16 @@ import "../App.css";
 
 const CARDS_PER_PAGE = 4;
 
-function ProjectCards({ projects = [] }) {
+function ProjectCards({ projects = [], statusFilter = "all" }) {
   const navigate = useNavigate();
 
   const visibleProjects = useMemo(() => {
-    return (projects || []).filter((project) => {
-      const status = normalizeStatus(project.status);
-      return status === "progress";
-    });
-  }, [projects]);
+    if (!projects) return [];
+    if (statusFilter === "all") {
+      return projects.filter((project) => normalizeStatus(project.status) === "progress");
+    }
+    return projects;
+  }, [projects, statusFilter]);
 
   const [page, setPage] = useState(1);
 
@@ -109,7 +110,9 @@ function ProjectCards({ projects = [] }) {
           })
         ) : (
           <p style={{ color: "#666", textAlign: "center" }}>
-            진행 중인 프로젝트가 없습니다.
+            {statusFilter === "all"
+              ? "진행 중인 프로젝트가 없습니다."
+              : "선택한 상태에 해당하는 프로젝트가 없습니다."}
           </p>
         )}
       </div>

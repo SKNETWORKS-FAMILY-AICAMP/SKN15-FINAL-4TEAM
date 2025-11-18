@@ -35,12 +35,16 @@ def _map_row(row: Sequence) -> FurnitureItem:
     )
 
 
-def fetch_furniture(limit: int = 6, big_cat: Optional[str] = None, small_cat: Optional[str] = None) -> List[FurnitureItem]:
+def fetch_furniture(
+    limit: Optional[int] = None,
+    big_cat: Optional[str] = None,
+    small_cat: Optional[str] = None,
+) -> List[FurnitureItem]:
     """
     furniture 테이블에서 실험에 사용할 가구 목록을 가져온다.
 
     Args:
-        limit: 반환할 최대 개수
+        limit: 반환할 최대 개수 (None이면 제한 없음)
         big_cat: 대분류 필터
         small_cat: 소분류 필터
     """
@@ -58,8 +62,9 @@ def fetch_furniture(limit: int = 6, big_cat: Optional[str] = None, small_cat: Op
         query.append("AND small_cat = %s")
         params.append(small_cat)
     query.append("ORDER BY RANDOM()")
-    query.append("LIMIT %s")
-    params.append(limit)
+    if limit is not None:
+        query.append("LIMIT %s")
+        params.append(limit)
 
     with connection.cursor() as cursor:
         cursor.execute(" ".join(query), params)
@@ -85,4 +90,3 @@ def fetch_furniture_by_ids(goods_ids: Sequence[int]) -> List[FurnitureItem]:
         rows = cursor.fetchall()
 
     return [_map_row(row) for row in rows]
-

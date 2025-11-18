@@ -23,6 +23,7 @@ import uuid
 import requests
 
 from django.core.exceptions import ImproperlyConfigured
+from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from PIL import Image
@@ -30,15 +31,80 @@ from PIL import Image
 from .models import User, Project, CustomizeReq, PendingUser, AiMakeImage
 from .serializers import ProjectSerializer, PendingUserSerializer, AdminUserSerializer
 from interior.services.clients import get_generative_model, get_openai_client
-from interior.services.catalog_metadata import load_catalog_metadata, save_catalog_metadata
+from interior.services.catalog_metadata import (
+    load_catalog_metadata,
+    save_catalog_metadata,
+    delete_catalog_metadata,
+)
 from interior.services.catalog_poc_furniture_repository import fetch_furniture
 from interior.services.design_pipeline import (
     PipelineStepError,
     run_design_pipeline,
     step4_iterative_refinement,
 )
+from interior.services.room_clear_detector import get_room_clear_detector
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_storage_name(path_or_url: Optional[str]) -> Optional[str]:
+    if not path_or_url:
+        return None
+
+    candidate = (path_or_url or "").strip()
+    if not candidate:
+        return None
+
+    try:
+        if default_storage.exists(candidate):
+            return candidate
+    except Exception:
+        pass
+
+    media_url = getattr(settings, "MEDIA_URL", "") or ""
+    media_path = ""
+    if media_url:
+        # MEDIA_URL could be absolute or relative
+        if candidate.startswith(media_url):
+            rel = candidate[len(media_url):].lstrip("/")
+            if rel:
+                try:
+                    if default_storage.exists(rel):
+                        return rel
+                except Exception:
+                    pass
+        parsed_media = urlparse(media_url)
+        media_path = parsed_media.path.lstrip("/")
+
+    parsed = urlparse(candidate)
+    rel_path = ""
+    if parsed.scheme in ("http", "https"):
+        rel_path = parsed.path.lstrip("/")
+    else:
+        rel_path = candidate.lstrip("/")
+
+    if media_path and rel_path.startswith(media_path):
+        rel_path = rel_path[len(media_path):].lstrip("/")
+
+    if rel_path:
+        try:
+            if default_storage.exists(rel_path):
+                return rel_path
+        except Exception:
+            return None
+
+    return None
+
+
+def _delete_storage_file(path_or_url: Optional[str]) -> None:
+    storage_name = _resolve_storage_name(path_or_url)
+    if not storage_name:
+        return
+    try:
+        default_storage.delete(storage_name)
+    except Exception as exc:  # pragma: no cover - best effort cleanup
+        logger.warning("저장소 파일 삭제 실패(%s): %s", storage_name, exc)
 
 
 # ✅ 비밀번호 해시 (단순 SHA256)
@@ -309,6 +375,7 @@ def create_project(request):
     image_url = None
     image_bytes = None
     image_ext = "jpg"
+    image_storage_path = None
 
     if image_file:
         try:
@@ -319,10 +386,15 @@ def create_project(request):
                 image_ext = image_file.name.rsplit(".", 1)[-1].lower() or "jpg"
             unique_name = f"{user_login_id}_{uuid.uuid4().hex[:8]}.{image_ext}"
             saved_path = default_storage.save(unique_name, ContentFile(image_bytes))
+            image_storage_path = saved_path
             image_url = default_storage.url(saved_path)
         except Exception as exc:
             logger.error("원본 이미지 저장 실패: %s", exc)
             return Response({"error": "이미지 업로드에 실패했습니다."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    description_text = (data.get("refinement_prompt") or "").strip()
+    if not description_text:
+        description_text = f"{user.name}의 인테리어 요청"
 
     with connection.cursor() as cursor:
         cursor.execute("SELECT COALESCE(MAX(project_id), 0) + 1 FROM project;")
@@ -340,7 +412,7 @@ def create_project(request):
                 next_project_id,
                 user.user_id,
                 data.get("title", "새 인테리어 프로젝트"),
-                f"{user.name}의 인테리어 요청",
+                description_text,
                 "progress",
                 image_url,
             ],
@@ -440,6 +512,7 @@ def create_project(request):
             try:
                 openai_client = get_openai_client()
                 gemini_model = get_generative_model()
+                room_detector = get_room_clear_detector()
             except ImproperlyConfigured as exc:
                 raise PipelineStepError(str(exc)) from exc
 
@@ -451,7 +524,7 @@ def create_project(request):
                     or f"{data.get('design_style') or ''} 스타일을 참고해서 선택된 한샘 가구를만 사용해 공간을 연출해 주세요."
                 )
                 for _ in range(variations):
-                    catalog_plan.append(fetch_furniture(limit=3, big_cat=big_cat))
+                    catalog_plan.append(fetch_furniture(limit=5, big_cat=big_cat))
                 if not any(catalog_plan):
                     use_catalog_furniture = False
 
@@ -466,6 +539,7 @@ def create_project(request):
                 use_catalog_furniture=use_catalog_furniture,
                 catalog_furniture_plan=catalog_plan,
                 catalog_instruction=catalog_instruction,
+                room_detector=room_detector,
             )
 
             variant_payloads = []
@@ -491,23 +565,50 @@ def create_project(request):
                     result_filename = f"{user_login_id}_{uuid.uuid4().hex[:8]}_result_{offset + 1}.webp"
                     result_storage_path = default_storage.save(result_filename, ContentFile(buffer.getvalue()))
                     result_url = default_storage.url(result_storage_path)
+                    design_memo_sllm = (variant.get("design_memo") or "").strip() or None
 
                     cursor.execute(
                         """
-                        INSERT INTO ai_make_image (image_id, project_id, req_id, ai_image_path, is_selected)
-                        VALUES (%s, %s, %s, %s, %s);
+                        INSERT INTO ai_make_image (
+                            image_id,
+                            project_id,
+                            req_id,
+                            ai_image_path,
+                            is_selected,
+                            design_memo,
+                            design_memo_sllm
+                        )
+                        VALUES (%s, %s, %s, %s, %s, %s, %s);
                         """,
-                        [next_image_id + offset, next_project_id, next_req_id, result_url, "N"],
+                        [
+                            next_image_id + offset,
+                            next_project_id,
+                            next_req_id,
+                            result_url,
+                            "N",
+                            None,
+                            design_memo_sllm,
+                        ],
                     )
 
-                    variant_payloads.append(
-                        {
-                            "index": variant.get("index", offset + 1),
-                            "image_url": result_url,
-                        }
-                    )
+                    payload = {
+                        "index": variant.get("index", offset + 1),
+                        "image_url": result_url,
+                    }
+                    if design_memo_sllm:
+                        payload["design_memo_sllm"] = design_memo_sllm
 
-                    catalog_meta = variant.get("catalog_furnitures")
+                    commerce_items = (
+                        variant.get("commerce_recommendations")
+                        or variant.get("catalog_furnitures")
+                        or []
+                    )
+                    if commerce_items:
+                        payload["commerce_recommendations"] = commerce_items
+
+                    variant_payloads.append(payload)
+
+                    catalog_meta = commerce_items or variant.get("catalog_furnitures")
                     if catalog_meta:
                         save_catalog_metadata(next_image_id + offset, catalog_meta)
 
@@ -540,6 +641,20 @@ def create_project(request):
                 except OSError:
                     logger.warning("임시 파일 삭제 실패: %s", temp_source_path)
 
+    if pipeline_payload.get("status") == "failed":
+        with connection.cursor() as cursor:
+            cursor.execute("DELETE FROM customize_req WHERE req_id = %s", [next_req_id])
+            cursor.execute("DELETE FROM project WHERE project_id = %s", [next_project_id])
+        if image_storage_path:
+            try:
+                default_storage.delete(image_storage_path)
+            except Exception as exc:  # pragma: no cover - cleanup best effort
+                logger.warning("이미지 파일 삭제 실패(%s): %s", image_storage_path, exc)
+        return Response(
+            {"error": pipeline_payload.get("reason") or "AI 이미지 생성에 실패했습니다."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     return Response(
         {
             "message": "프로젝트가 성공적으로 생성되었습니다.",
@@ -559,12 +674,6 @@ def refine_project_image(request, project_id, image_id):
         project = Project.objects.get(project_id=project_id)
     except Project.DoesNotExist:
         return Response({"error": "프로젝트를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
-
-    # 관리자가 아닌 경우, 본인의 프로젝트만 수정 가능
-    if user_id and project.user_id != user_id:
-        user = User.objects.filter(user_id=user_id).first()
-        if not user or user.user_permission_code != "ADMIN":
-            return Response({"error": "이 프로젝트를 수정할 권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
 
     refinement_prompt = request.data.get("refinement_prompt")
     if not refinement_prompt:
@@ -650,6 +759,47 @@ def refine_project_image(request, project_id, image_id):
     )
 
 
+@api_view(["PATCH"])
+def update_ai_image_memo(request, project_id, image_id):
+    user_id = request.headers.get("X-User-ID") or request.data.get("user_id")
+
+    try:
+        image = AiMakeImage.objects.select_related("project").get(
+            project_id=project_id, image_id=image_id
+        )
+    except AiMakeImage.DoesNotExist:
+        return Response({"error": "AI 이미지를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+
+    project = image.project
+
+    if user_id and project.user_id != user_id:
+        user = User.objects.filter(user_id=user_id).first()
+        if not user or user.user_permission_code != "ADMIN":
+            return Response({"error": "이 프로젝트에 접근할 권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
+
+    memo_text = (request.data.get("design_memo") or "").strip()
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE ai_make_image
+                SET design_memo = %s
+                WHERE project_id = %s AND image_id = %s
+                """,
+                [memo_text or None, project_id, image_id],
+            )
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.error("디자인 메모 저장 실패(image_id=%s): %s", image_id, exc)
+        return Response({"error": "디자인 메모를 저장하지 못했습니다."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    image.design_memo = memo_text or None
+    return Response(
+        {"message": "디자인 메모가 저장되었습니다.", "design_memo": image.design_memo},
+        status=status.HTTP_200_OK,
+    )
+
+
 
 # ✅ 프로젝트 목록 조회 (유저별)
 @api_view(["GET"])
@@ -686,6 +836,57 @@ def list_projects(request, user_id):
     return Response(payload, status=status.HTTP_200_OK)
 
 
+@api_view(["DELETE"])
+def delete_project(request, project_id):
+    user_id = request.headers.get("X-User-ID") or request.data.get("user_id")
+    if not user_id:
+        return Response({"error": "사용자 정보를 확인할 수 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        project = Project.objects.get(project_id=project_id)
+    except Project.DoesNotExist:
+        return Response({"error": "프로젝트를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+
+    if project.user_id != user_id:
+        user = User.objects.filter(user_id=user_id).first()
+        if not user or user.user_permission_code != "ADMIN":
+            return Response({"error": "이 프로젝트를 삭제할 권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
+
+    ai_images = list(AiMakeImage.objects.filter(project_id=project_id))
+    custom_requests = list(CustomizeReq.objects.filter(project_id=project_id))
+
+    storage_targets = []
+    if project.project_image:
+        storage_targets.append(project.project_image)
+    for req in custom_requests:
+        if req.attachment_path:
+            storage_targets.append(req.attachment_path)
+    for img in ai_images:
+        if img.ai_image_path:
+            storage_targets.append(img.ai_image_path)
+
+    try:
+        with transaction.atomic():
+            AiMakeImage.objects.filter(project_id=project_id).delete()
+            CustomizeReq.objects.filter(project_id=project_id).delete()
+            project.delete()
+    except Exception as exc:
+        logger.error("프로젝트 삭제 실패(project_id=%s): %s", project_id, exc)
+        return Response({"error": "프로젝트를 삭제하지 못했습니다."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    for image in ai_images:
+        try:
+            delete_catalog_metadata(image.image_id)
+        except Exception:
+            # best effort cleanup
+            pass
+
+    for target in storage_targets:
+        _delete_storage_file(target)
+
+    return Response({"message": "프로젝트가 삭제되었습니다."}, status=status.HTTP_200_OK)
+
+
 @api_view(["GET"])
 def list_project_ai_images(request, project_id):
     # 권한 검증: 요청한 사용자가 이 프로젝트의 소유자인지 확인
@@ -711,15 +912,22 @@ def list_project_ai_images(request, project_id):
     data = []
     for image in images:
         req = image.req
+        catalog_info = load_catalog_metadata(image.image_id) or []
         data.append(
             {
                 "image_id": image.image_id,
                 "project_id": image.project_id,
+                "project_title": project.project_name,
+                "project_name": project.project_name,
+                "project_status": project.status,
                 "req_id": getattr(req, "req_id", None),
                 "image_url": image.ai_image_path,
                 "is_selected": (image.is_selected or "").upper() == "Y",
-                "catalog_furnitures": load_catalog_metadata(image.image_id) or [],
+                "catalog_furnitures": catalog_info,
+                "commerce_recommendations": catalog_info,
                 "source_image_id": getattr(image, "source_image_id", None),
+                "design_memo": getattr(image, "design_memo", None),
+                "design_memo_sllm": getattr(image, "design_memo_sllm", None),
                 "design_style": getattr(req, "design_style", None),
                 "residence_type": getattr(req, "residence_type", None),
                 "space_type": getattr(req, "space_type", None),
@@ -732,12 +940,20 @@ def list_project_ai_images(request, project_id):
 
 
 # ✅ 상태 변경
-@api_view(["PATCH"])
+@api_view(["PATCH", "POST"])
 def update_project_status(request, project_id):
-    # 권한 검증
-    user_id = request.headers.get('X-User-ID') or request.data.get('user_id')
+    """프로젝트 상태 변경 (progress, completed, pending)"""
+    VALID_STATUSES = {"progress", "completed", "pending"}
 
-    new_status = request.data.get("status")
+    # 권한 검증
+    user_id = request.headers.get("X-User-ID") or request.data.get("user_id")
+    new_status = (request.data.get("status") or "").strip().lower()
+
+    if new_status not in VALID_STATUSES:
+        return Response(
+            {"error": "유효하지 않은 상태입니다. (progress, completed, pending 중 선택)"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     try:
         project = Project.objects.get(project_id=project_id)
@@ -750,9 +966,22 @@ def update_project_status(request, project_id):
         if not user or user.user_permission_code != "ADMIN":
             return Response({"error": "이 프로젝트를 수정할 권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
 
+    if project.status == new_status:
+        return Response(
+            {"message": "상태가 이미 동일합니다.", "project": ProjectSerializer(project).data},
+            status=status.HTTP_200_OK,
+        )
+
     project.status = new_status
-    project.save()
-    return Response(ProjectSerializer(project).data, status=status.HTTP_200_OK)
+    project.save(update_fields=["status", "update_date"])
+
+    return Response(
+        {
+            "message": "프로젝트 상태가 업데이트되었습니다.",
+            "project": ProjectSerializer(project).data,
+        },
+        status=status.HTTP_200_OK,
+    )
 
 
 # ✅ 통계 (유저별)
@@ -919,36 +1148,3 @@ class AdminUserDeleteView(AdminValidationMixin, APIView):
             cursor.execute("DELETE FROM users WHERE user_id = %s", [user_id])
 
         return Response({"message": "사용자 계정을 삭제했습니다."}, status=status.HTTP_200_OK)
-
-
-# ✅ 프로젝트 상태 업데이트
-@api_view(["PATCH"])
-def update_project_status(request, project_id):
-    """프로젝트 상태 변경 (progress, completed, pending)"""
-    new_status = request.data.get("status")
-
-    if new_status not in ["progress", "completed", "pending"]:
-        return Response(
-            {"error": "유효하지 않은 상태입니다. (progress, completed, pending 중 선택)"},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    with connection.cursor() as cursor:
-        # 프로젝트 존재 확인
-        cursor.execute("SELECT project_id FROM project WHERE project_id = %s", [project_id])
-        if not cursor.fetchone():
-            return Response(
-                {"error": "프로젝트를 찾을 수 없습니다."},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        # 상태 업데이트
-        cursor.execute(
-            "UPDATE project SET status = %s, update_date = NOW() WHERE project_id = %s",
-            [new_status, project_id]
-        )
-
-    return Response(
-        {"message": "프로젝트 상태가 업데이트되었습니다.", "status": new_status},
-        status=status.HTTP_200_OK
-    )

@@ -2,6 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import "../App.css";
 
+const formatPrice = (value) => {
+  if (typeof value !== "number") return null;
+  return `${value.toLocaleString("ko-KR")}원`;
+};
+
+const formatDiscount = (rate) => {
+  if (typeof rate !== "number") return null;
+  return `${rate}%↓`;
+};
+
 /**
  * @param {Array} concepts - [{ id, title, description, imageUrl }]
  * @param {Function} onSelectionChange - callback(selectedIds)
@@ -69,11 +79,10 @@ function DesignResultsGallery({
       <section className="design-results__panel">
         <header className="design-results__header">
           <div>
-            <p className="design-results__step">Step 2 / 4 · 복수 선택 지원</p>
             <h2>Review &amp; Select Design Concepts</h2>
             <p className="design-results__description">
               원하는 카드를 선택하고 &lsquo;선택 완료&rsquo; 버튼을 눌러 다음 단계로
-              이동하세요. 이미지를 클릭하면 Before/After 비교를 확인할 수 있습니다.
+              이동하세요.
             </p>
           </div>
           <span className="design-results__badge">
@@ -101,6 +110,10 @@ function DesignResultsGallery({
             const isRefined = concept.sourceImageId !== null && concept.sourceImageId !== undefined;
             const badgeText = isRefined ? "수정 이미지" : "생성 이미지";
             const badgeTone = isRefined ? "is-refined" : "is-original";
+            const commerceList =
+              concept.commerceRecommendations && concept.commerceRecommendations.length > 0
+                ? concept.commerceRecommendations.slice(0, 3)
+                : [];
             return (
               <motion.article
                 key={concept.id}
@@ -140,6 +153,46 @@ function DesignResultsGallery({
                   </div>
                   <h3>{concept.title}</h3>
                   {concept.description && <p>{concept.description}</p>}
+                  {commerceList.length > 0 && (
+                    <div className="design-card__commerce">
+                      <div className="design-card__commerce-title">한샘 추천 가구</div>
+                      <ul className="design-card__commerce-list">
+                        {commerceList.map((item, idx) => {
+                          const key = `${concept.id}-commerce-${idx}-${item.goods_id || item.name || idx}`;
+                          const priceText = formatPrice(item.price);
+                          const discountText = formatDiscount(item.discount_rate);
+                          return (
+                            <li key={key} className="design-card__commerce-item">
+                              <div className="design-card__commerce-meta">
+                                <span className="design-card__commerce-name">
+                                  {item.goods_name || item.name || `추천 가구 ${idx + 1}`}
+                                </span>
+                                {priceText && (
+                                  <span className="design-card__commerce-price">
+                                    {priceText}
+                                    {discountText && (
+                                      <em className="design-card__commerce-discount">{discountText}</em>
+                                    )}
+                                  </span>
+                                )}
+                              </div>
+                              {item.url && (
+                                <a
+                                  className="design-card__commerce-link"
+                                  href={item.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(event) => event.stopPropagation()}
+                                >
+                                  보러가기
+                                </a>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  )}
                   <div className="design-card__actions">
                     <button
                       type="button"

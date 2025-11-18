@@ -43,13 +43,50 @@
   color: #333;
 }
 
-.modal-header h2 {
-  font-family: "Montserrat", "Noto Sans KR", sans-serif;
+.modal-header {
   text-align: center;
   margin-bottom: 25px;
+}
+
+.modal-title-display {
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 2px solid rgba(102, 126, 234, 0.7);
+  padding: 10px 5px;
+  font-family: "Montserrat", "Noto Sans KR", sans-serif;
+  font-size: 1.5rem;
   font-weight: 700;
   color: #333;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.modal-title-display:hover,
+.modal-title-display:focus-visible {
+  border-bottom-color: #667eea;
+  color: #222;
+  outline: none;
+}
+
+.modal-title-text {
+  text-decoration: none;
+}
+
+.modal-title-placeholder {
+  font-size: 1rem;
+  color: #9a9a9a;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.modal-title-pencil {
+  font-size: 1rem;
 }
 
 .title-input {
@@ -59,13 +96,21 @@
   border: none;
   border-bottom: 2px solid #667eea;
   outline: none;
-  margin-bottom: 25px;
+  padding: 10px 5px;
+  font-family: "Montserrat", "Noto Sans KR", sans-serif;
 }
 
 .new-project-form {
   display: flex;
   gap: 25px;
   align-items: flex-start;
+}
+
+.form-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
 .image-upload {
@@ -115,6 +160,24 @@
   height: 30px;
 }
 
+.left-options {
+  background: #f4f4ff;
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  border-radius: 15px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.left-options .form-group input {
+  width: 160px;
+}
+
+.compact-input {
+  width: 160px;
+}
+
 .form-right {
   flex: 1;
   display: flex;
@@ -128,16 +191,20 @@
   margin-bottom: 4px;
 }
 
-.form-group input {
+.form-group input,
+.form-group select {
   width: 100%;
   padding: 10px;
   border: 1.8px solid #ddd;
   border-radius: 10px;
   outline: none;
   transition: all 0.3s ease;
+  background: #fff;
+  box-sizing: border-box;
 }
 
-.form-group input:focus {
+.form-group input:focus,
+.form-group select:focus {
   border-color: #667eea;
   box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
 }
@@ -152,6 +219,7 @@
   min-height: 90px;
   font-family: inherit;
   transition: all 0.3s ease;
+  box-sizing: border-box;
 }
 
 .form-group textarea:focus {
@@ -173,22 +241,26 @@
   color: #555;
 }
 
+.left-options .checkbox {
+  margin-top: 4px;
+}
+
 .submit-btn {
   margin-top: 15px;
   padding: 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%);
   color: #fff;
   font-weight: 700;
   font-size: 1rem;
   border: none;
   border-radius: 12px;
   cursor: pointer;
-  box-shadow: 0 6px 15px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 6px 15px rgba(255, 107, 53, 0.3);
   transition: all 0.3s ease;
 }
 
 .submit-btn:hover {
-  background: linear-gradient(135deg, #5a6ee0 0%, #6b41a8 100%);
+  background: linear-gradient(135deg, #ff814d 0%, #ff9c70 100%);
 }
 
 .status-message {

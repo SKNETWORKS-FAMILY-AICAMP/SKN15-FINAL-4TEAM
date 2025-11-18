@@ -13,6 +13,7 @@ function ResourcesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [sortOption, setSortOption] = useState("default");
+  const [hoverRoomCategory, setHoverRoomCategory] = useState(null);
   const itemsPerPage = 12;
 
   // Animation variants
@@ -140,6 +141,34 @@ function ResourcesPage() {
     setCurrentPage(1);
   }, [activeRoomCategory, activeSmallCategory, searchText, sortOption]);
 
+  const getSmallCategoriesForRoom = (roomId) => {
+    if (roomId === "all" || !roomId) {
+      return smallCategories;
+    }
+
+    const filteredCats = smallCategories.filter((cat) => {
+      if (cat.id === "all" || cat.id === "set") return true;
+      return furnitureData.some(
+        (item) => item.roomName === roomId && item.smallCatName === cat.id
+      );
+    });
+
+    const hasMultiWord = furnitureData.some((item) => {
+      if (item.roomName !== roomId) return false;
+      const words = item.smallCatName?.trim().split(/[\s,/]+/) || [];
+      return words.length > 1;
+    });
+
+    return filteredCats.filter((cat) => cat.id !== "set" || hasMultiWord);
+  };
+
+  const highlightedRoomCategory = hoverRoomCategory || activeRoomCategory || "all";
+  const highlightedRoomLabel =
+    roomCategories.find((cat) => cat.id === highlightedRoomCategory)?.label ||
+    "전체";
+  const highlightedSmallCategories =
+    getSmallCategoriesForRoom(highlightedRoomCategory);
+
   // 페이지 번호 생성 함수 (최대 10개까지만 표시)
   const getPageNumbers = () => {
     const maxPagesToShow = 10;
@@ -174,26 +203,6 @@ function ResourcesPage() {
   };
 
   // room 카테고리 변경 시 small 카테고리 필터링
-  const availableSmallCategories = activeRoomCategory === "all"
-    ? smallCategories
-    : (() => {
-        const filteredCats = smallCategories.filter((cat) => {
-          if (cat.id === "all" || cat.id === "set") return true;
-          return furnitureData.some(
-            (item) => item.roomName === activeRoomCategory && item.smallCatName === cat.id
-          );
-        });
-
-        // "세트" 카테고리가 해당 room에 복합 단어 카테고리가 있는지 확인
-        const hasMultiWord = furnitureData.some((item) => {
-          if (item.roomName !== activeRoomCategory) return false;
-          const words = item.smallCatName?.trim().split(/[\s,/]+/) || [];
-          return words.length > 1;
-        });
-
-        return filteredCats.filter(cat => cat.id !== "set" || hasMultiWord);
-      })();
-
   return (
     <main
       style={{
@@ -271,33 +280,252 @@ function ResourcesPage() {
         animate="visible"
         variants={fadeUp}
       >
-          {/* Search Bar */}
-          <div
+          {/* Room Category Mega Menu */}
+          <div style={{ marginBottom: "40px" }}>
+            <div
+              style={{
+                background: "linear-gradient(135deg, #ffffff, #f6f6f6)",
+                border: "1px solid rgba(0, 0, 0, 0.08)",
+                borderRadius: "32px",
+                padding: "24px 32px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "20px",
+              }}
+            >
+              <div>
+                <p
+                  style={{
+                    fontSize: "0.9rem",
+                    color: "rgba(0,0,0,0.6)",
+                    margin: "0 0 6px",
+                    letterSpacing: "0.08em",
+                  }}
+                >
+                  CATEGORY PICKER
+                </p>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: "1.8rem",
+                    fontWeight: 800,
+                    color: "#111",
+                  }}
+                >
+                  공간별 가구 컬렉션
+                </h3>
+                <p
+                  style={{
+                    margin: "6px 0 0",
+                    color: "rgba(0,0,0,0.65)",
+                  }}
+                >
+                  왼쪽에서 공간을 고르면 오른쪽에 해당 세부 카테고리가 나타납니다.
+                </p>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "24px",
+                }}
+                onMouseLeave={() => setHoverRoomCategory(null)}
+              >
+                <div
+                  style={{
+                    flex: "0 0 220px",
+                    background: "rgba(0,0,0,0.03)",
+                    borderRadius: "18px",
+                    border: "1px solid rgba(0,0,0,0.08)",
+                    padding: "14px",
+                  }}
+                >
+                  {roomCategories.map((category) => {
+                    const isHighlighted =
+                      highlightedRoomCategory === category.id;
+                    return (
+                      <button
+                        key={category.id}
+                        type="button"
+                        onMouseEnter={() => setHoverRoomCategory(category.id)}
+                        onFocus={() => setHoverRoomCategory(category.id)}
+                        onClick={() => {
+                          setActiveRoomCategory(category.id);
+                          setActiveSmallCategory("all");
+                        }}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "10px 12px",
+                          borderRadius: "12px",
+                          border: "none",
+                          background: isHighlighted
+                            ? "rgba(0,0,0,0.08)"
+                            : "transparent",
+                          color: isHighlighted ? "#000" : "rgba(0,0,0,0.65)",
+                          fontWeight: isHighlighted ? 700 : 500,
+                          fontSize: "0.95rem",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          cursor: "pointer",
+                          transition: "all 0.2s ease",
+                        }}
+                      >
+                        <span>{category.label}</span>
+                        {isHighlighted && (
+                          <span style={{ fontSize: "0.8rem" }}>›</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div
+                  style={{
+                    flex: "1 1 300px",
+                    minWidth: "260px",
+                    background: "#fafafa",
+                    borderRadius: "22px",
+                    border: "1px solid rgba(0,0,0,0.08)",
+                    padding: "18px 20px",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "16px",
+                      color: "rgba(0,0,0,0.75)",
+                      fontSize: "0.95rem",
+                    }}
+                  >
+                    <strong>{highlightedRoomLabel}</strong>
+                    <span>
+                      {highlightedSmallCategories.length > 0
+                        ? `${highlightedSmallCategories.length}개 분류`
+                        : "세부 분류 없음"}
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns:
+                        "repeat(auto-fit, minmax(160px, 1fr))",
+                      gap: "10px",
+                    }}
+                  >
+                    {highlightedSmallCategories.length > 0 ? (
+                      highlightedSmallCategories
+                        .filter((category) => category.id !== "all")
+                        .map((category) => {
+                          const isActiveRoom =
+                            activeRoomCategory === highlightedRoomCategory;
+                          const isActiveCombo =
+                            isActiveRoom && activeSmallCategory === category.id;
+                          return (
+                            <motion.button
+                              key={`${highlightedRoomCategory}-${category.id}`}
+                              type="button"
+                              onClick={() => {
+                                const targetRoom = highlightedRoomCategory;
+                                setActiveRoomCategory(targetRoom);
+                                setActiveSmallCategory(category.id);
+                                setHoverRoomCategory(null);
+                              }}
+                              style={{
+                                width: "100%",
+                                textAlign: "left",
+                                padding: "10px 16px",
+                                borderRadius: "14px",
+                                border: "none",
+                                background: isActiveCombo
+                                  ? "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)"
+                                  : "rgba(0, 0, 0, 0.05)",
+                                color: isActiveCombo ? "#fff" : "#333",
+                                fontWeight: isActiveCombo ? 700 : 500,
+                                fontSize: "0.95rem",
+                                cursor: "pointer",
+                                transition: "all 0.2s ease",
+                              }}
+                              whileHover={{ scale: 1.03 }}
+                              whileTap={{ scale: 0.95 }}
+                            >
+                              {category.label}
+                            </motion.button>
+                          );
+                        })
+                    ) : (
+                      <span
+                        style={{
+                          color: "rgba(0,0,0,0.55)",
+                          fontSize: "0.9rem",
+                        }}
+                      >
+                        표시할 중분류가 없습니다.
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+      </motion.div>
+
+      {/* Search + Sorter */}
+      <div
+        style={{
+          maxWidth: "1200px",
+          margin: "0 auto",
+          padding: "0 20px",
+          marginBottom: "20px",
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "20px",
+          justifyContent: "space-between",
+          alignItems: "flex-end",
+        }}
+      >
+        <div
+          style={{
+            flex: "1 1 320px",
+            maxWidth: "70%",
+          }}
+        >
+          <label
+            htmlFor="resource-search"
             style={{
-              maxWidth: "500px",
-              margin: "0 auto 40px",
-              position: "relative",
+              display: "block",
+              marginBottom: "8px",
+              fontSize: "0.9rem",
+              fontWeight: 600,
+              color: "rgba(255, 255, 255, 0.75)",
             }}
           >
+            가구 검색
+          </label>
           <input
+            id="resource-search"
             type="text"
-            placeholder="가구 검색..."
+            placeholder="가구명으로 검색하세요"
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             style={{
               width: "100%",
-              padding: "16px 20px",
+              padding: "14px 18px",
               border: "2px solid rgba(255, 255, 255, 0.2)",
-              borderRadius: "25px",
+              borderRadius: "18px",
               fontSize: "1rem",
-              boxSizing: "border-box",
-              transition: "all 0.3s ease",
-              background: "rgba(255, 255, 255, 0.05)",
+              background: "rgba(255, 255, 255, 0.04)",
               color: "#fff",
+              transition: "all 0.3s ease",
             }}
             onFocus={(e) => {
               e.target.style.borderColor = "#ff6b35";
-              e.target.style.boxShadow = "0 0 0 4px rgba(255, 107, 53, 0.1)";
+              e.target.style.boxShadow = "0 0 0 4px rgba(255, 107, 53, 0.12)";
             }}
             onBlur={(e) => {
               e.target.style.borderColor = "rgba(255, 255, 255, 0.2)";
@@ -305,122 +533,7 @@ function ResourcesPage() {
             }}
           />
         </div>
-
-          {/* Room Category Filters (큰 카테고리) */}
-          <div style={{ marginBottom: "20px" }}>
-            <h3 style={{
-              textAlign: "center",
-              fontSize: "1.1rem",
-              fontWeight: 600,
-              color: "rgba(255, 255, 255, 0.9)",
-              marginBottom: "15px"
-            }}>
-              공간 선택
-            </h3>
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "12px",
-              justifyContent: "center",
-            }}
-          >
-            {roomCategories.map((category) => (
-              <motion.button
-                key={category.id}
-                onClick={() => {
-                  setActiveRoomCategory(category.id);
-                  setActiveSmallCategory("all");
-                }}
-                style={{
-                  padding: "12px 24px",
-                  border: "none",
-                  borderRadius: "25px",
-                  fontSize: "1rem",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  transition: "all 0.3s ease",
-                  background:
-                    activeRoomCategory === category.id
-                      ? "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)"
-                      : "rgba(255, 255, 255, 0.15)",
-                  color: activeRoomCategory === category.id ? "#fff" : "#999",
-                  boxShadow: "none",
-                }}
-                whileHover={{
-                  scale: 1.05,
-                }}
-                whileTap={{ scale: 0.95 }}
-              >
-                {category.label}
-              </motion.button>
-            ))}
-          </div>
-        </div>
-
-          {/* Small Category Filters (작은 카테고리) */}
-          <div style={{ marginBottom: "30px" }}>
-            <h3 style={{
-              textAlign: "center",
-              fontSize: "1.1rem",
-              fontWeight: 600,
-              color: "rgba(255, 255, 255, 0.9)",
-              marginBottom: "15px"
-            }}>
-              가구 종류
-            </h3>
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "12px",
-              justifyContent: "center",
-            }}
-          >
-            {availableSmallCategories.map((category) => (
-              <motion.button
-                key={category.id}
-                onClick={() => setActiveSmallCategory(category.id)}
-                style={{
-                  padding: "10px 20px",
-                  border: "none",
-                  borderRadius: "20px",
-                  fontSize: "0.95rem",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  transition: "all 0.3s ease",
-                  background:
-                    activeSmallCategory === category.id
-                      ? "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)"
-                      : "rgba(255, 255, 255, 0.15)",
-                  color: activeSmallCategory === category.id ? "#fff" : "#999",
-                  boxShadow: "none",
-                }}
-                whileHover={{
-                  scale: 1.05,
-                }}
-                whileTap={{ scale: 0.95 }}
-              >
-                {category.label}
-              </motion.button>
-            ))}
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Sorter */}
-      <div
-        style={{
-          maxWidth: "1200px",
-          margin: "0 auto",
-          padding: "0 20px",
-          marginTop: "-20px",
-          marginBottom: "10px",
-          display: "flex",
-          justifyContent: "flex-end",
-        }}
-      >
-        <div style={{ textAlign: "left" }}>
+        <div style={{ flex: "0 0 260px" }}>
           <label
             htmlFor="resource-sorter"
             style={{
@@ -438,9 +551,9 @@ function ResourcesPage() {
             value={sortOption}
             onChange={(e) => setSortOption(e.target.value)}
             style={{
-              minWidth: "200px",
-              padding: "10px 18px",
-              borderRadius: "999px",
+              width: "100%",
+              padding: "12px 18px",
+              borderRadius: "18px",
               border: "1px solid rgba(255, 255, 255, 0.2)",
               backgroundColor: "rgba(255, 255, 255, 0.08)",
               color: "#fff",
@@ -647,7 +760,7 @@ function ResourcesPage() {
       </div>
 
       {/* Pagination */}
-      {sortedFurniture.length > 0 && totalPages > 1 && (
+      {sortedFurniture.length > 0 && (
         <motion.div
           style={{
             display: "flex",
@@ -662,6 +775,30 @@ function ResourcesPage() {
           transition={{ delay: 0.3 }}
         >
           <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
+            {/* 이전 페이지 화살표 */}
+            {currentPage > 1 && (
+              <motion.button
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                style={{
+                  padding: "8px 12px",
+                  border: "none",
+                  borderRadius: "6px",
+                  fontSize: "0.9rem",
+                  cursor: "pointer",
+                  background: "transparent",
+                  color: "#aaa",
+                  transition: "all 0.2s ease",
+                }}
+                whileHover={{
+                  scale: 1.05,
+                  color: "#667eea",
+                }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <i className="fas fa-chevron-left"></i> 이전
+              </motion.button>
+            )}
+
             {getPageNumbers().map((page) => (
               <motion.button
                 key={page}

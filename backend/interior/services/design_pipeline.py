@@ -3,15 +3,23 @@ import io
 import logging
 import mimetypes
 import os
+import re
 import tempfile
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Sequence
+from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
 import google.generativeai as genai
+from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from PIL import Image
 
 from interior.services.catalog_poc_injector import inject_with_gemini
 from interior.services.catalog_poc_furniture_repository import FurnitureItem
+from interior.services.design_advisor import DesignAdvisor, VariantPlan, get_design_advisor
+from interior.services.hanssemmall_client import (
+    ProductSource,
+    enrich_product_names,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +40,21 @@ DEFAULT_EMPTY_ROOM_PROMPT = """
 - Do not alter the room's layout or structure in any way.
 - CRITICAL: Do not change the camera angle, perspective, or composition of the photo.
 """.strip()
+
+DEFAULT_VARIATION_INSTRUCTIONS = [
+    "다양한 색상의 가구들을 사용하여 활기찬 분위기를 연출하세요. 가구 배치는 대칭적으로 정돈된 느낌으로 하세요.",
+    "차분하고 모던한 색상(회색, 베이지, 화이트)의 가구를 선택하고, 비대칭 배치로 역동적인 느낌을 주세요.",
+    "우드 톤의 자연스러운 가구들을 중심으로 배치하고, 식물과 같은 자연 요소를 추가하세요.",
+    "밝은 파스텔 톤의 가구들을 사용하여 부드럽고 따뜻한 분위기를 연출하세요. 소품도 다양하게 배치하세요.",
+    "대담한 악센트 컬러(네이비, 그린, 버건디 등)의 가구를 포인트로 사용하고, 나머지는 중성 색상으로 조화롭게 배치하세요.",
+    "미니멀한 디자인의 가구를 최소한으로 배치하고, 여백을 살려 공간감을 강조하세요.",
+    "다양한 텍스처(벨벳, 리넨, 가죽)의 가구들을 혼합하여 풍부한 질감을 표현하세요.",
+    "빈티지 또는 레트로 스타일의 가구들을 선택하고, 독특한 소품들로 개성을 더하세요.",
+    "기능적이면서도 스타일리시한 수납가구들을 포함하여 실용적인 공간을 연출하세요. 다양한 형태와 크기의 가구를 조합하세요.",
+]
+
+COMMERCE_MAX_ITEMS = 5
+PRODUCT_LINE_PATTERN = re.compile(r"^\s*(?:\d+[\).\s-]*|[-•*]+)\s*(.+)$")
 
 
 class PipelineStepError(RuntimeError):
@@ -66,11 +89,29 @@ def generate_empty_room(
     *,
     prompt: Optional[str] = None,
     size: str = "1024x1024",
+    room_detector: Optional[object] = None,
 ) -> Image.Image:
     """Generate an empty room image from the original input."""
     logger.info("1단계 시작: 빈 방 이미지 생성 (%s)", original_image_path)
     _ensure_source_exists(original_image_path)
     mimetype = _detect_mimetype(original_image_path)
+
+    if room_detector is not None:
+        try:
+            detection = room_detector.evaluate(original_image_path)
+            logger.info(
+                "방 이미지 감지 결과 score=%.4f threshold=%.4f",
+                detection.score,
+                detection.threshold,
+            )
+            if not detection.is_room:
+                raise PipelineStepError(
+                    "업로드한 이미지가 방 사진으로 인식되지 않았습니다. 실내 공간 사진을 다시 업로드해주세요."
+                )
+        except PipelineStepError:
+            raise
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("빈 방 감지에 실패했습니다. 기본 플로우를 진행합니다: %s", exc)
 
     with open(original_image_path, "rb") as img_file:
         image_data = img_file.read()
@@ -108,6 +149,7 @@ def step3_add_local_furniture(
     upload_file_func: Optional[Callable[[io.BytesIO, str], object]] = None,
     timeout: int = 180,
     variation_index: int = 0,
+    variation_instruction: Optional[str] = None,
 ) -> Image.Image:
     """Apply style and furniture to the empty room using Gemini."""
     if generative_model is None:
@@ -116,19 +158,9 @@ def step3_add_local_furniture(
     upload_func = upload_file_func or genai.upload_file
 
     # 다양한 가구 조합 및 배치를 위한 variation 설정
-    variation_instructions = [
-        "다양한 색상의 가구들을 사용하여 활기찬 분위기를 연출하세요. 가구 배치는 대칭적으로 정돈된 느낌으로 하세요.",
-        "차분하고 모던한 색상(회색, 베이지, 화이트)의 가구를 선택하고, 비대칭 배치로 역동적인 느낌을 주세요.",
-        "우드 톤의 자연스러운 가구들을 중심으로 배치하고, 식물과 같은 자연 요소를 추가하세요.",
-        "밝은 파스텔 톤의 가구들을 사용하여 부드럽고 따뜻한 분위기를 연출하세요. 소품도 다양하게 배치하세요.",
-        "대담한 악센트 컬러(네이비, 그린, 버건디 등)의 가구를 포인트로 사용하고, 나머지는 중성 색상으로 조화롭게 배치하세요.",
-        "미니멀한 디자인의 가구를 최소한으로 배치하고, 여백을 살려 공간감을 강조하세요.",
-        "다양한 텍스처(벨벳, 리넨, 가죽)의 가구들을 혼합하여 풍부한 질감을 표현하세요.",
-        "빈티지 또는 레트로 스타일의 가구들을 선택하고, 독특한 소품들로 개성을 더하세요.",
-        "기능적이면서도 스타일리시한 수납가구들을 포함하여 실용적인 공간을 연출하세요. 다양한 형태와 크기의 가구를 조합하세요.",
+    variation_guide = variation_instruction or DEFAULT_VARIATION_INSTRUCTIONS[
+        variation_index % len(DEFAULT_VARIATION_INSTRUCTIONS)
     ]
-
-    variation_guide = variation_instructions[variation_index % len(variation_instructions)]
 
     logger.info("3단계 시작: 스타일 적용 및 가구 배치")
 
@@ -311,21 +343,41 @@ def run_design_pipeline(
     refinement_prompt: Optional[str] = None,
     furniture_paths: Optional[Sequence[str]] = None,
     size: str = "1024x1024",
-    gemini_timeout: int = 180,
+    gemini_timeout: Optional[int] = None,
     variations: int = 1,
     use_catalog_furniture: bool = False,
     catalog_furniture_plan: Optional[List[List[FurnitureItem]]] = None,
     catalog_instruction: str = "",
+    room_detector: Optional[object] = None,
+    design_advisor: Optional[DesignAdvisor] = None,
+    enable_design_advisor: bool = True,
 ) -> Dict[str, object]:
     """Run the full AI pipeline and return all variants."""
+    advisor: Optional[DesignAdvisor] = design_advisor
+    if advisor is None and enable_design_advisor:
+        try:
+            advisor = get_design_advisor()
+        except ImproperlyConfigured as exc:
+            logger.info("SLLM 디자인 어드바이저 비활성화: %s", exc)
+            advisor = None
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("SLLM 디자인 어드바이저 초기화 실패: %s", exc)
+            advisor = None
+
     empty_room = generate_empty_room(
         original_image_path,
         openai_client,
         size=size,
+        room_detector=room_detector,
     )
 
     variants: List[Dict[str, Image.Image]] = []
     variation_count = max(1, int(variations))
+    effective_timeout = (
+        gemini_timeout
+        if gemini_timeout is not None
+        else getattr(settings, "DESIGN_PIPELINE_GEMINI_TIMEOUT", 180)
+    )
     errors: List[str] = []
     catalog_plan = catalog_furniture_plan or []
     temp_empty_room_path: Optional[str] = None
@@ -343,6 +395,7 @@ def run_design_pipeline(
                 logger.info("변형 %d/%d 생성 시작", index + 1, variation_count)
                 generated_image: Optional[Image.Image] = None
                 generated_meta: Optional[List[dict]] = None
+                llm_plan: Optional[VariantPlan] = None
 
                 catalog_items: Optional[List[FurnitureItem]] = None
                 if use_catalog_furniture and catalog_plan:
@@ -350,6 +403,21 @@ def run_design_pipeline(
                         catalog_items = catalog_plan[index] or None
                     else:
                         catalog_items = catalog_plan[-1] or None
+
+                if advisor:
+                    try:
+                        llm_plan = advisor.plan_variant(
+                            style_prompt=style_prompt,
+                            variation_index=index,
+                            catalog_items=catalog_items or [],
+                            catalog_instruction=catalog_instruction,
+                            use_catalog_furniture=use_catalog_furniture,
+                        )
+                    except ImproperlyConfigured:
+                        advisor = None
+                    except Exception as exc:  # pragma: no cover - defensive
+                        logger.warning("변형 %d LLM 지침 생성 실패: %s", index + 1, exc)
+                        llm_plan = None
 
                 if use_catalog_furniture and catalog_items:
                     generated_meta = [
@@ -385,13 +453,18 @@ def run_design_pipeline(
                         )
 
                 if generated_image is None:
+                    variation_instruction = None
+                    if llm_plan and llm_plan.instruction:
+                        variation_instruction = llm_plan.instruction.strip() or None
+
                     with_furniture = step3_add_local_furniture(
                         empty_room,
                         style_prompt,
                         furniture_paths or [],
                         generative_model=generative_model,
-                        timeout=gemini_timeout,
+                        timeout=effective_timeout,
                         variation_index=index,
+                        variation_instruction=variation_instruction,
                     )
                     generated_image = with_furniture
                 else:
@@ -406,12 +479,25 @@ def run_design_pipeline(
                         size=size,
                     )
 
+                commerce_recommendations: List[Dict[str, object]] = []
+                commerce_sources = _prepare_commerce_sources(llm_plan, generated_meta)
+                if commerce_sources:
+                    try:
+                        commerce_recommendations = enrich_product_names(
+                            commerce_sources,
+                            limit_per_item=1,
+                        )
+                    except Exception as exc:  # pragma: no cover - 네트워크 오류 보호
+                        logger.warning("한샘몰 추천 정보 생성 실패: %s", exc)
+
                 variants.append(
                     {
                         "index": index + 1,
                         "with_furniture": with_furniture,
                         "final_image": final_image,
                         "catalog_furnitures": generated_meta,
+                        "design_memo": llm_plan.design_memo if llm_plan else None,
+                        "commerce_recommendations": commerce_recommendations,
                     }
                 )
                 logger.info("변형 %d 생성 완료", index + 1)
@@ -448,3 +534,84 @@ __all__ = [
     "step4_iterative_refinement",
     "run_design_pipeline",
 ]
+
+
+def _extract_product_names_from_memo(memo: str) -> List[str]:
+    """Try to extract numbered 가구 이름 from the design memo text."""
+    names: List[str] = []
+    if not memo:
+        return names
+
+    for raw_line in memo.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        match = PRODUCT_LINE_PATTERN.match(line)
+        if not match:
+            continue
+        content = match.group(1).strip()
+        if not content:
+            continue
+        for sep in (" - ", " — ", " – ", ":", "|"):
+            if sep in content:
+                content = content.split(sep, 1)[0].strip()
+                break
+        if content:
+            names.append(content)
+    return names
+
+
+def _normalize_product_key(name: str) -> str:
+    return re.sub(r"\s+", " ", name or "").strip().lower()
+
+
+def _prepare_commerce_sources(
+    llm_plan: Optional[VariantPlan],
+    catalog_meta: Optional[List[Dict[str, object]]],
+) -> List[ProductSource]:
+    order: List[str] = []
+    mapping: Dict[str, Tuple[str, Dict[str, object]]] = {}
+
+    def _register(raw_name: str, extra: Optional[Dict[str, object]] = None) -> None:
+        if not raw_name:
+            return
+        key = _normalize_product_key(raw_name)
+        if not key:
+            return
+        if key not in mapping:
+            order.append(key)
+            mapping[key] = (raw_name, dict(extra or {}))
+        else:
+            if extra:
+                current_name, current_meta = mapping[key]
+                merged = dict(current_meta)
+                merged.update(extra)
+                mapping[key] = (current_name, merged)
+
+    if llm_plan and llm_plan.product_names:
+        for name in llm_plan.product_names:
+            if name:
+                _register(name.strip())
+
+    if catalog_meta:
+        for item in catalog_meta:
+            goods_name = (item or {}).get("goods_name") or (item or {}).get("name")
+            if goods_name:
+                extra_meta = {
+                    "goods_id": item.get("goods_id"),
+                    "goods_name": goods_name,
+                }
+                _register(str(goods_name), extra_meta)
+
+    if order:
+        sources = [mapping[key] for key in order]
+        return sources[:COMMERCE_MAX_ITEMS]
+
+    if llm_plan and llm_plan.design_memo:
+        extracted = _extract_product_names_from_memo(llm_plan.design_memo)
+        for name in extracted:
+            _register(name)
+
+    if not order:
+        return []
+    return [mapping[key] for key in order][:COMMERCE_MAX_ITEMS]

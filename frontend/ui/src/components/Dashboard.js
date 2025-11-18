@@ -21,6 +21,7 @@ function Dashboard() {
   const [projects, setProjects] = useState([]);
   const [stats, setStats] = useState(DEFAULT_STATS);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("all");
   const navigate = useNavigate();
 
   const userId =
@@ -174,15 +175,61 @@ function Dashboard() {
   };
 
   const handleStatusUpdated = (projectId, newStatus) => {
+    let previousStatus = null;
+    const normalizedStatus = normalizeStatus(newStatus);
     setProjects((prev) =>
-      prev.map((project) =>
-        project.id === projectId
-          ? { ...project, status: normalizeStatus(newStatus) }
-          : project
-      )
+      prev.map((project) => {
+        if (project.id === projectId) {
+          previousStatus = normalizeStatus(project.status);
+          return { ...project, status: normalizedStatus };
+        }
+        return project;
+      })
     );
+    if (previousStatus && previousStatus !== normalizedStatus) {
+      setStats((prev) => {
+        const updated = { ...prev };
+        if (previousStatus === "progress") {
+          updated.in_progress = Math.max(0, (updated.in_progress || 0) - 1);
+        } else if (previousStatus === "completed") {
+          updated.completed = Math.max(0, (updated.completed || 0) - 1);
+        }
+
+        if (normalizedStatus === "progress") {
+          updated.in_progress = (updated.in_progress || 0) + 1;
+        } else if (normalizedStatus === "completed") {
+          updated.completed = (updated.completed || 0) + 1;
+        }
+        return updated;
+      });
+    }
     fetchData();
   };
+
+  const handleProjectDeleted = useCallback((projectId) => {
+    setProjects((prev) => {
+      const removedProject = prev.find((project) => project.id === projectId);
+      const next = prev.filter((project) => project.id !== projectId);
+      if (removedProject) {
+        setStats((prevStats) => {
+          const updated = { ...prevStats };
+          updated.total_projects = Math.max(0, (updated.total_projects || 0) - 1);
+          const removedStatus = normalizeStatus(removedProject.status);
+          if (removedStatus === "progress") {
+            updated.in_progress = Math.max(0, (updated.in_progress || 0) - 1);
+          } else if (removedStatus === "completed") {
+            updated.completed = Math.max(0, (updated.completed || 0) - 1);
+          }
+          updated.total_designs = Math.max(
+            0,
+            (updated.total_designs || 0) - (removedProject.ai_image_count || 0)
+          );
+          return updated;
+        });
+      }
+      return next;
+    });
+  }, []);
 
   const progressProjects = useMemo(
     () =>
@@ -193,7 +240,36 @@ function Dashboard() {
     [projects]
   );
 
+  const filteredProjects = useMemo(() => {
+    if (statusFilter === "all") return projects;
+    return projects.filter(
+      (project) => normalizeStatus(project.status) === statusFilter
+    );
+  }, [projects, statusFilter]);
+
+  const cardsProjects = useMemo(() => {
+    if (statusFilter === "all") return progressProjects;
+    return filteredProjects;
+  }, [statusFilter, progressProjects, filteredProjects]);
+
   const hasProjects = projects.length > 0;
+
+  const statusOptions = [
+    { id: "all", label: "전체" },
+    { id: "progress", label: "진행 중" },
+    { id: "completed", label: "완료" },
+    { id: "pending", label: "대기" },
+  ];
+  const selectedFilterLabel =
+    statusOptions.find((option) => option.id === statusFilter)?.label || "전체";
+  const cardsSectionTitle =
+    statusFilter === "all"
+      ? "현재 진행중인 프로젝트"
+      : `${selectedFilterLabel} 프로젝트`;
+  const cardsSectionSubtitle =
+    statusFilter === "all"
+      ? "카드당 4개씩 확인하고, 이전/다음 버튼으로 다른 프로젝트도 살펴보세요."
+      : `${selectedFilterLabel} 상태에 해당하는 프로젝트만 모아서 보여줍니다.`;
 
   return (
     <main
@@ -313,15 +389,14 @@ function Dashboard() {
                     color: "#fff",
                   }}
                 >
-                  현재 진행중인 프로젝트
+                  {cardsSectionTitle}
                 </h2>
                 <p style={{ color: "rgba(255, 255, 255, 0.6)", marginBottom: "25px" }}>
-                  카드당 4개씩 확인하고, 이전/다음 버튼으로 다른 프로젝트도
-                  살펴보세요.
+                  {cardsSectionSubtitle}
                 </p>
               </motion.div>
-              {progressProjects.length > 0 ? (
-                <ProjectCards projects={progressProjects} />
+              {cardsProjects.length > 0 ? (
+                <ProjectCards projects={cardsProjects} statusFilter={statusFilter} />
               ) : (
                 <motion.div
                   style={{
@@ -334,8 +409,9 @@ function Dashboard() {
                   }}
                   variants={fadeUp}
                 >
-                  진행 중인 프로젝트가 아직 없습니다. 프로젝트 상태를 &quot;진행
-                  중&quot;으로 업데이트하면 여기에서 확인할 수 있어요.
+                  {statusFilter === "all"
+                    ? '진행 중인 프로젝트가 아직 없습니다. 프로젝트 상태를 "진행 중"으로 업데이트하면 여기에서 확인할 수 있어요.'
+                    : "선택한 상태에 해당하는 프로젝트가 없습니다."}
                 </motion.div>
               )}
             </motion.section>
@@ -363,8 +439,60 @@ function Dashboard() {
                     최근 프로젝트를 5개씩 확인하고 상태를 바로 변경할 수 있습니다.
                   </p>
                 </div>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "8px",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {statusOptions.map((option) => {
+                    const isActive = statusFilter === option.id;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => setStatusFilter(option.id)}
+                        style={{
+                          padding: "10px 18px",
+                          borderRadius: "999px",
+                          border: "1px solid rgba(255, 255, 255, 0.2)",
+                          background: isActive
+                            ? "linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)"
+                            : "rgba(255, 255, 255, 0.05)",
+                          color: isActive ? "#fff" : "rgba(255, 255, 255, 0.8)",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          transition: "all 0.2s ease",
+                        }}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <ProjectTable projects={projects} onStatusChange={handleStatusUpdated} />
+              {filteredProjects.length > 0 ? (
+                <ProjectTable
+                  projects={filteredProjects}
+                  onStatusChange={handleStatusUpdated}
+                  onDeleteProject={handleProjectDeleted}
+                />
+              ) : (
+                <motion.div
+                  style={{
+                    background: "rgba(255, 255, 255, 0.05)",
+                    borderRadius: "20px",
+                    padding: "40px",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    textAlign: "center",
+                    color: "rgba(255, 255, 255, 0.7)",
+                  }}
+                  variants={fadeUp}
+                >
+                  선택한 상태에 해당하는 프로젝트가 없습니다.
+                </motion.div>
+              )}
             </motion.section>
           </>
         ) : (

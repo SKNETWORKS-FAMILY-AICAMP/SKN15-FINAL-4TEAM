@@ -4,6 +4,11 @@ import { FaArrowLeft } from "react-icons/fa";
 import DesignResultsGallery from "./DesignResultsGallery";
 import ImageRefineModal from "./ImageRefineModal";
 import { getProjectAiImages, refineProjectImage } from "../api/projectAPI";
+import {
+  formatSpaceLabel,
+  formatBudgetLabel,
+  formatStyleLabel,
+} from "../utils/categoryLabels";
 import "../styles/ResultsPage.css";
 
 function ResultsPage() {
@@ -17,6 +22,7 @@ function ResultsPage() {
   const [refineIndex, setRefineIndex] = useState(0);
   const [isRefineLoading, setIsRefineLoading] = useState(false);
   const [refineError, setRefineError] = useState(null);
+  const [projectTitle, setProjectTitle] = useState("");
 
   const fetchImages = useCallback(async () => {
     if (!projectId) return;
@@ -25,25 +31,38 @@ function ResultsPage() {
 
     try {
       const images = await getProjectAiImages(projectId);
-      const mapped = images.map((image, index) => ({
-        id: image.image_id?.toString() || `ai-${index}`,
-        imageId: image.image_id,
-        sourceImageId: image.source_image_id ?? null,
-        title: image.design_style || `디자인 컨셉 ${index + 1}`,
-        description:
-          image.residence_type ||
-          image.family_type ||
-          image.space_type ||
-          "생성된 인테리어 디자인",
-        imageUrl: image.image_url,
-        isSelected: image.is_selected,
-        designStyle: image.design_style,
-        residenceType: image.residence_type,
-        spaceType: image.space_type,
-        budgetRange: image.budget_range,
-        familyType: image.family_type,
-        catalogFurnitures: image.catalog_furnitures || [],
-      }));
+      const mapped = images.map((image, index) => {
+        const spaceLabel = formatSpaceLabel(image.space_type);
+        const budgetLabel = formatBudgetLabel(image.budget_range);
+        const styleLabel = formatStyleLabel(image.design_style);
+        return {
+          id: image.image_id?.toString() || `ai-${index}`,
+          imageId: image.image_id,
+          sourceImageId: image.source_image_id ?? null,
+          title: styleLabel || image.design_style || `디자인 컨셉 ${index + 1}`,
+          description:
+            image.residence_type ||
+            image.family_type ||
+            spaceLabel ||
+            "생성된 인테리어 디자인",
+          imageUrl: image.image_url,
+          isSelected: image.is_selected,
+          designStyle: styleLabel || image.design_style,
+          designStyleCode: image.design_style,
+          residenceType: image.residence_type,
+          spaceType: spaceLabel || image.space_type,
+          spaceTypeCode: image.space_type,
+          budgetRange: budgetLabel || image.budget_range,
+          budgetRangeCode: image.budget_range,
+          familyType: image.family_type,
+          catalogFurnitures: image.catalog_furnitures || [],
+          commerceRecommendations:
+            image.commerce_recommendations ||
+            image.catalog_furnitures ||
+            [],
+          designMemo: image.design_memo,
+        };
+      });
 
       const sorted = [...mapped].sort((a, b) => {
         const aRefined = a.sourceImageId ? 1 : 0;
@@ -60,9 +79,20 @@ function ResultsPage() {
 
       setConcepts(sorted);
       setSelectedIds(preselected);
+      if (images && images.length > 0) {
+        const firstImage = images[0];
+        setProjectTitle(
+          firstImage.project_name ||
+            firstImage.project_title ||
+            `Project #${projectId}`
+        );
+      } else {
+        setProjectTitle(`Project #${projectId}`);
+      }
     } catch (err) {
       console.error("❌ AI 이미지 로드 실패:", err);
       setError("AI 이미지를 불러오는 중 문제가 발생했습니다.");
+      setProjectTitle((prev) => prev || `Project #${projectId}`);
     } finally {
       setIsLoading(false);
     }
@@ -123,12 +153,14 @@ function ResultsPage() {
         <button
           type="button"
           className="results-layout__back"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate("/projects")}
         >
           <FaArrowLeft /> 프로젝트 목록으로
         </button>
         <h1>AI 생성 디자인 결과</h1>
-        <span className="results-layout__project">Project #{projectId}</span>
+        <span className="results-layout__project">
+          {projectTitle || `Project #${projectId}`}
+        </span>
       </header>
 
       {isLoading ? (

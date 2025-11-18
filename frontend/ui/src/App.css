@@ -749,6 +749,74 @@ body {
   line-height: 1.5;
 }
 
+.design-card__commerce {
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.design-card__commerce-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 0.02em;
+}
+
+.design-card__commerce-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.design-card__commerce-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.83rem;
+}
+
+.design-card__commerce-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 70%;
+}
+
+.design-card__commerce-name {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.design-card__commerce-price {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.design-card__commerce-discount {
+  margin-left: 4px;
+  font-style: normal;
+  font-weight: 600;
+  color: #ffb347;
+}
+
+.design-card__commerce-link {
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  color: #ffb893;
+  text-decoration: underline;
+}
+
+.design-card__commerce-link:hover {
+  color: #ffd1bb;
+}
+
 .design-card__actions {
   margin-top: 12px;
   display: flex;

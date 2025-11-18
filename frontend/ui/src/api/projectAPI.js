@@ -89,15 +89,58 @@ export const refineProjectImage = async (project_id, image_id, refinement_prompt
   }
 };
 
+// ✅ 디자인 메모 저장
+export const saveDesignMemo = async (project_id, image_id, design_memo) => {
+  try {
+    const userId = localStorage.getItem("user_id");
+    const res = await axios.patch(
+      `${API_BASE}/projects/${project_id}/ai-images/${image_id}/memo/`,
+      {
+        design_memo,
+        ...(userId ? { user_id: userId } : {}),
+      },
+      {
+        headers: userId ? { "X-User-ID": userId } : undefined,
+      }
+    );
+    return res.data;
+  } catch (error) {
+    console.error("❌ 디자인 메모 저장 실패:", error.response?.data || error);
+    throw error;
+  }
+};
+
 // ✅ 프로젝트 상태 변경 (진행 중 / 완료 / 대기)
 export const updateProjectStatus = async (project_id, newStatus) => {
   try {
-    const res = await axios.patch(`${API_BASE}/projects/${project_id}/update/`, {
-      status: newStatus,
-    });
+    const res = await axios.patch(
+      `${API_BASE}/projects/${project_id}/update/`,
+      {
+        status: newStatus,
+      },
+    );
     return res.data;
   } catch (error) {
     console.error("❌ 상태 변경 실패:", error.response?.data || error);
+    throw error;
+  }
+};
+
+export const deleteProject = async (project_id) => {
+  try {
+    const userId = typeof window !== "undefined" ? localStorage.getItem("user_id") : null;
+    const config = {
+      headers: {},
+      data: {},
+    };
+    if (userId) {
+      config.headers["X-User-ID"] = userId;
+      config.data.user_id = userId;
+    }
+    const res = await axios.delete(`${API_BASE}/projects/${project_id}/delete/`, config);
+    return res.data;
+  } catch (error) {
+    console.error("❌ 프로젝트 삭제 실패:", error.response?.data || error);
     throw error;
   }
 };

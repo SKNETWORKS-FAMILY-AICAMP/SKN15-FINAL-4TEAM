@@ -512,27 +512,6 @@ function LibraryPage() {
                 Search
               </motion.button>
             </form>
-            <motion.button
-              style={{
-                padding: "14px 25px",
-                background: "rgba(255, 255, 255, 0.15)",
-                color: "#fff",
-                border: "none",
-                borderRadius: "12px",
-                fontSize: "1rem",
-                fontWeight: 600,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                boxShadow: "0 8px 20px rgba(0, 0, 0, 0.2)",
-              }}
-              whileHover={{ scale: 1.02, background: "rgba(255, 255, 255, 0.2)" }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <i className="fas fa-plus"></i>
-              자료 업로드
-            </motion.button>
           </motion.div>
 
           {/* News */}
