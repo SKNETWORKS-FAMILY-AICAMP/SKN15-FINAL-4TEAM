@@ -1,0 +1,69 @@
+{
+  "full": {
+    "rougeL": {
+      "mean": 0.731782,
+      "std": 0.183154
+    },
+    "bleu4": {
+      "mean": 0.043875,
+      "std": 0.040488
+    },
+    "meteor": {
+      "mean": 0.386299,
+      "std": 0.151069
+    },
+    "berts_f1": {
+      "mean": 0.87734,
+      "std": 0.034009
+    },
+    "emb_cos": {
+      "mean": 0.558782,
+      "std": 0.152109
+    },
+    "bleu4_corpus": 0.037745,
+    "WeightedScore": 0.769961
+  },
+  "desc": {
+    "rougeL": {
+      "mean": 0.018303,
+      "std": 0.109929
+    },
+    "bleu4": {
+      "mean": 0.003194,
+      "std": 0.004072
+    },
+    "meteor": {
+      "mean": 0.031793,
+      "std": 0.022368
+    },
+    "berts_f1": {
+      "mean": 0.857181,
+      "std": 0.01419
+    },
+    "emb_cos": {
+      "mean": 0.577475,
+      "std": 0.132629
+    },
+    "bleu4_corpus": 0.000354,
+    "WeightedScore": 0.549576
+  },
+  "json": {
+    "json_exact": {
+      "mean": 0.0,
+      "std": 0.0
+    },
+    "json_key_f1": {
+      "mean": 0.776209,
+      "std": 0.387867
+    },
+    "json_rougeL": {
+      "mean": 0.696443,
+      "std": 0.307142
+    },
+    "json_val_cos": {
+      "mean": 0.851354,
+      "std": 0.232484
+    },
+    "WeightedScore_json": 0.619119
+  }
+}
