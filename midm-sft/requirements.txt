@@ -1,0 +1,12 @@
+pandas
+tqdm
+transformers
+peft
+sacrebleu
+rouge_score
+bert_score
+sentence_transformers
+evaluate
+bitsandbytes
+hf_transfer
+accelerate
