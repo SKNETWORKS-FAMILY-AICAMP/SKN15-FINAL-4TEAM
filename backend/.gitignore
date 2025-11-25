@@ -56,3 +56,5 @@ htmlcov/
 
 # Claude Code
 .claude/
+
+backend/sllm/model.safetensors
