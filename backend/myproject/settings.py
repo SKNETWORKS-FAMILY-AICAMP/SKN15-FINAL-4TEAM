@@ -185,4 +185,10 @@ SLLM_TEMPERATURE = float(os.environ.get("SLLM_TEMPERATURE", 0.7))
 SLLM_TOP_P = float(os.environ.get("SLLM_TOP_P", 0.85))
 SLLM_TOP_K = int(os.environ.get("SLLM_TOP_K", 40))
 SLLM_DEVICE = os.environ.get("SLLM_DEVICE", "auto")
-DESIGN_PIPELINE_GEMINI_TIMEOUT = int(os.environ.get("DESIGN_PIPELINE_GEMINI_TIMEOUT", 360))
+
+_gemini_timeout_raw = os.environ.get("DESIGN_PIPELINE_GEMINI_TIMEOUT")
+if _gemini_timeout_raw:
+    _gemini_timeout_value = int(_gemini_timeout_raw)
+    DESIGN_PIPELINE_GEMINI_TIMEOUT = _gemini_timeout_value if _gemini_timeout_value > 0 else None
+else:
+    DESIGN_PIPELINE_GEMINI_TIMEOUT = None  # None = effectively unlimited

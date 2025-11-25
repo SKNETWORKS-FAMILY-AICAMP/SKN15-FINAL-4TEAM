@@ -35,4 +35,9 @@ export const STYLE_OPTIONS = [
   { code: "sty_9999", name: "기타" },
 ];
 
+export const STYLE_CODE_MAP = STYLE_OPTIONS.reduce((acc, option) => {
+  acc[option.code.toLowerCase()] = option.name;
+  return acc;
+}, {});
+
 export const formatOptionLabel = (option) => option.name;

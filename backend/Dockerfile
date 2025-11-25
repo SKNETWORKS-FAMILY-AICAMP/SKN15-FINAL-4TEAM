@@ -29,5 +29,5 @@ EXPOSE 9000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
   CMD wget --quiet --tries=1 --spider http://localhost:9000/api/register/ || exit 1
 
-# Run gunicorn with extended timeout for long-running AI image generation
-CMD ["gunicorn", "--bind", "0.0.0.0:9000", "--workers", "3", "--timeout", "1500", "myproject.wsgi:application"]
+# Run gunicorn with extended timeout for long-running AI image generation (effectively unlimited)
+CMD ["gunicorn", "--bind", "0.0.0.0:9000", "--workers", "3", "--timeout", "7200", "myproject.wsgi:application"]

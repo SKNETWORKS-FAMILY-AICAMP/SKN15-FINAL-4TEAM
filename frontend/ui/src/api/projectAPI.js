@@ -80,7 +80,7 @@ export const refineProjectImage = async (project_id, image_id, refinement_prompt
     const res = await axios.post(
       `${API_BASE}/projects/${project_id}/ai-images/${image_id}/refine/`,
       { refinement_prompt },
-      { timeout: 180000 }
+      { timeout: 0 }
     );
     return res.data;
   } catch (error) {

@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { FaArrowLeft } from "react-icons/fa";
 import { getProjectAiImages, saveDesignMemo, updateProjectStatus } from "../api/projectAPI";
 import { getStatusInfo, STATUS_OPTIONS, normalizeStatus } from "../utils/statusStyles";
-import { SPACE_OPTIONS, COST_OPTIONS, STYLE_OPTIONS } from "../utils/categoryOptions";
+import { SPACE_OPTIONS, COST_OPTIONS, STYLE_OPTIONS, STYLE_CODE_MAP } from "../utils/categoryOptions";
 import "../styles/ProjectSummaryPage.css";
 
 const resolveOptionLabel = (options, value) => {
@@ -13,6 +13,11 @@ const resolveOptionLabel = (options, value) => {
     (option) => option.code === normalized || option.name === normalized
   );
   return match ? match.name : value;
+};
+
+const replaceStyleCodes = (text) => {
+  if (!text) return text;
+  return text.replace(/sty_\d{4}/gi, (code) => STYLE_CODE_MAP[code.toLowerCase()] || code);
 };
 
 function ProjectSummaryPage() {
@@ -47,26 +52,32 @@ function ProjectSummaryPage() {
       setError(null);
       try {
         const images = await getProjectAiImages(projectId);
-        const mapped = images.map((image, index) => ({
-          id: image.image_id?.toString() || `ai-${index}`,
-          imageId: image.image_id,
-          sourceImageId: image.source_image_id ?? null,
-          title: image.design_style || `디자인 컨셉 ${index + 1}`,
-          description:
-            image.residence_type ||
-            image.family_type ||
-            image.space_type ||
-            "생성된 인테리어 디자인",
-          imageUrl: image.image_url,
-          designStyle: image.design_style,
-          residenceType: image.residence_type,
-          spaceType: image.space_type,
-          budgetRange: image.budget_range,
-          familyType: image.family_type,
-          catalogFurnitures: image.catalog_furnitures || [],
-          designMemo: image.design_memo || "",
-          designMemoSllm: image.design_memo_sllm || "",
-        }));
+        const mapped = images.map((image, index) => {
+          const styleLabel = resolveOptionLabel(STYLE_OPTIONS, image.design_style);
+          return {
+            id: image.image_id?.toString() || `ai-${index}`,
+            imageId: image.image_id,
+            sourceImageId: image.source_image_id ?? null,
+            title:
+              styleLabel ||
+              image.design_style ||
+              `디자인 컨셉 ${index + 1}`,
+            description:
+              image.residence_type ||
+              image.family_type ||
+              image.space_type ||
+              "생성된 인테리어 디자인",
+            imageUrl: image.image_url,
+            designStyle: styleLabel || image.design_style,
+            residenceType: image.residence_type,
+            spaceType: image.space_type,
+            budgetRange: image.budget_range,
+            familyType: image.family_type,
+            catalogFurnitures: image.catalog_furnitures || [],
+            designMemo: image.design_memo || "",
+            designMemoSllm: image.design_memo_sllm || "",
+          };
+        });
         setConcepts(mapped);
         if (images && images.length > 0) {
           setProjectStatus(normalizeStatus(images[0].project_status || "pending"));
@@ -154,7 +165,8 @@ function ProjectSummaryPage() {
       return "SLLM 디자인 설명을 불러오지 못했습니다.";
     }
     const memoText = (primaryImage.designMemoSllm || "").trim();
-    return memoText || defaultDesignMemo;
+    const resolved = memoText || defaultDesignMemo;
+    return replaceStyleCodes(resolved);
   }, [primaryImage, defaultDesignMemo]);
 
   const usedFurnitureList = useMemo(() => {

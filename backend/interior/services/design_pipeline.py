@@ -147,7 +147,7 @@ def step3_add_local_furniture(
     *,
     generative_model,
     upload_file_func: Optional[Callable[[io.BytesIO, str], object]] = None,
-    timeout: int = 180,
+    timeout: Optional[int] = 180,
     variation_index: int = 0,
     variation_instruction: Optional[str] = None,
 ) -> Image.Image:
@@ -253,10 +253,14 @@ def step3_add_local_furniture(
 
     request_payload = [prompt, base_room_file] + furniture_files
 
+    request_kwargs = {}
+    if timeout and timeout > 0:
+        request_kwargs["request_options"] = {"timeout": timeout}
+
     try:
         response = generative_model.generate_content(
             request_payload,
-            request_options={"timeout": timeout},
+            **request_kwargs,
         )
     except Exception as exc:
         raise PipelineStepError(
@@ -373,10 +377,15 @@ def run_design_pipeline(
 
     variants: List[Dict[str, Image.Image]] = []
     variation_count = max(1, int(variations))
-    effective_timeout = (
-        gemini_timeout
-        if gemini_timeout is not None
-        else getattr(settings, "DESIGN_PIPELINE_GEMINI_TIMEOUT", 180)
+
+    def _normalize_timeout(value: Optional[int]) -> Optional[int]:
+        if value is None:
+            return None
+        return value if value > 0 else None
+
+    configured_timeout = getattr(settings, "DESIGN_PIPELINE_GEMINI_TIMEOUT", 180)
+    effective_timeout = _normalize_timeout(
+        gemini_timeout if gemini_timeout is not None else configured_timeout
     )
     errors: List[str] = []
     catalog_plan = catalog_furniture_plan or []
