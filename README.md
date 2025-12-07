@@ -73,6 +73,7 @@
 
 ---
 ## ☁️ AWS 인프라 아키텍처  
+![aws](https://github.com/user-attachments/assets/1b363f9a-1ea2-4189-9ccc-e1ca506412f3)
 
 ---
 
@@ -83,7 +84,7 @@
 | **Classification Model**             | 방 여부·빈방 판별       | 이미지            | Yes/No               |
 | **OpenAI Image Edit (gpt-image-1)**  | 가구 제거 / 빈 방 생성   | 원본 이미지 + 마스크   | Clean Room           |
 | **Image Model (NanoBanana)** | 인테리어 시안 생성       | 빈 방 이미지 + 프롬프트 | 시안 이미지               |
-| **SLLM (Multi-task)**                | 설명·프롬프트·가구 목록 생성 | 요구 텍스트         | DESC + PROMPT + FURN |
+| **SLLM (Multi-task)**                | 설명·프롬프트·가구 목록 생성 | 요구 텍스트         | DESC + JSON + FURN |
 
 
 
@@ -136,7 +137,7 @@
 
 | **Loss Curve** | **BLEU Score** |
 |----------------|----------------|
-| <img width="500" src="https://github.com/user-attachments/assets/382f4522-e69b-4a75-8593-32033aba0291" /> | <img width="500" src="https://github.com/user-attachments/assets/90eebedd-4bcd-4e6e-833e-a5471c3dc872" /> |
+| <img width="500" src="https://github.com/user-attachments/assets/e3f6868a-4969-41b2-b33c-0361a289c64a" /> | <img width="500" src="https://github.com/user-attachments/assets/90eebedd-4bcd-4e6e-833e-a5471c3dc872" /> |
 
 | **ROUGE-L / METEOR** | **BERTScore(F1) / Embedding Cosine** |
 |----------------------|--------------------------------------|
