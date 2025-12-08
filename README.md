@@ -60,7 +60,8 @@
 ---
 ## 🧱 시스템 아키텍처
 
-<img width="3459" height="2436" alt="fin_system" src="https://github.com/user-attachments/assets/6703df82-398e-4c89-9741-6340802a2081" />
+![system-1](https://github.com/user-attachments/assets/a75bfc79-b16d-4f75-bc96-2d4523e87547)
+
 
 
 ### 🔵 Primary Flow (Black Line)
