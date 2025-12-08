@@ -137,11 +137,11 @@
 
 | **Loss Curve** | **BLEU Score** |
 |----------------|----------------|
-| <img width="500" src="https://github.com/user-attachments/assets/e3f6868a-4969-41b2-b33c-0361a289c64a" /> | <img width="500" src="https://github.com/user-attachments/assets/90eebedd-4bcd-4e6e-833e-a5471c3dc872" /> |
+| <img width="500" alt="output" src="https://github.com/user-attachments/assets/1db883cf-7b99-4999-99f1-d48ef46c72d3" /> | <img width="500" alt="plot_bleu" src="https://github.com/user-attachments/assets/13324983-abaa-4d39-8f0c-7db30ba7848d" /> |
 
 | **ROUGE-L / METEOR** | **BERTScore(F1) / Embedding Cosine** |
 |----------------------|--------------------------------------|
-| <img width="500" src="https://github.com/user-attachments/assets/54fc294e-4279-44d8-bb79-15c379c0f33c" /> | <img width="500" src="https://github.com/user-attachments/assets/a8a62cf3-3d5f-435b-a06e-3065528047b8" /> |
+| <img width="500" alt="plot_lexical" src="https://github.com/user-attachments/assets/2130952f-da67-468f-878d-a9be9d7bab32" /> | <img width="500" alt="plot_semantic" src="https://github.com/user-attachments/assets/d40d28ce-72a7-4611-85e0-f172d02e5684" /> |
   
 
 ---
