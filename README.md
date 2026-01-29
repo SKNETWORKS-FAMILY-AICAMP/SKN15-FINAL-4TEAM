@@ -52,7 +52,7 @@
 |--------|--------|--------|--------|--------|
 | <img src="https://github.com/user-attachments/assets/4c0d0666-7cce-4a00-9752-eabe04ffc819" width="160" height="160" /> | <img src="https://github.com/user-attachments/assets/cee30360-6ebd-483d-a15e-08cd66ade36d" width="160" height="160" /> | <img src="https://github.com/user-attachments/assets/55202f12-190a-41a5-a057-06b7ce59c49d" width="160" height="160" /> | <img src="https://github.com/user-attachments/assets/1e3d5ad6-0f95-4677-a93d-d2b59895dc67" width="160" height="160" /> | <img src="https://github.com/user-attachments/assets/62492357-b120-4bb9-b4d0-e2b7bde93f5e" width="160" height="160" /> |
 | **PM & SLLM Engineer** | **UNet / Preprocessing Engineer** | **Backend & Partial Frontend** | **Image AI & DB Engineer** | **Frontend & AWS Infra** |
-| • 프로젝트 총괄/기획<br>• SLLM 파이프라인<br>• Classification 설계 | • UNet 빈방모델 학습<br>• 이미지 전처리/마스킹<br>• 데이터 제작·정제 | • Django 백엔드<br>• DB 연동/REST API<br>• 프론트 일부 기능 | • NanoBanana 이미지 생성<br>• Object Removal 연동<br>• DB 설계/QA | • Next.js UI/UX<br>• FastAPI 연동<br>• AWS 인프라/배포 |
+| • 프로젝트 총괄/기획<br>• SLLM 파이프라인<br>• Classification 설계 | • UNet 빈방모델 학습<br>• 이미지 전처리/마스킹<br>• 데이터 제작·정제 | • Django 백엔드<br>• DB 연동/REST API<br>• 프론트 일부 기능 | • NanoBanana 이미지 생성<br>• Object Removal 연동<br>• DB 설계/QA | • Next.js UI/UX<br>• FastAPI 연동<br>• AWS 인프라/배포<br>• Django 백엔드<br>• DB 연동/REST AP |
 
 
 
